@@ -12,7 +12,7 @@ public class emagSim extends JComponent
     int window_y = 900;
     boolean scaleVectors = false;
     static boolean running = true;
-    private static JFrame frame = new JFrame("shitter");
+    private static JFrame frame = new JFrame("frame");
     boolean userPressed = false;
     Point lastPoint;
 
