@@ -7,6 +7,9 @@ public class Proton
     int charge = 1;
     double x;
     double y;
+    double fX;
+    double fY;
+    double mass = 1.67262192 * Math.pow(10, -27);
     double centerX;
     double centerY;
     int fieldArrowNum = 50;
@@ -27,8 +30,21 @@ public class Proton
         movements.add(new Double[]{x, y, time});
         times.add(time);
     }
-    public void update(Graphics g)
+    public void update(Graphics g, Panel panel)
     {
+        Point2D.Double tempPoint = panel.getForce(x, y, true, charge);
+        fX += tempPoint.x * Math.cos(tempPoint.y);
+        fY += tempPoint.x * Math.sin(tempPoint.y);
+        if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
+        {
+            x += fX * panel.timeStep * Math.pow(10, -21) / mass;
+            y += fY * panel.timeStep * Math.pow(10, -21) / mass;
+        }
+        else if(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint))
+        {
+            fX = 0;
+            fY = 0;
+        }
         g.setColor(new Color(255,0,0));
         //System.out.println(x + " " + y);
         g.fillOval((int)x - 25, (int)y - 25, 50, 50);
