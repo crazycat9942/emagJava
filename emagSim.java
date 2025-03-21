@@ -1,3 +1,5 @@
+import javafx.geometry.Point3D;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -47,7 +49,7 @@ public class emagSim extends JComponent
                     {
                         if (e.getBounds().contains(m.getPoint()) || (e.getBounds().contains(lastPoint) && userPressed))
                         {
-                            e.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, panel.time);
+                            e.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, 0, panel.time);
                             frame.repaint();
                         }
                     }
@@ -55,7 +57,7 @@ public class emagSim extends JComponent
                     {
                         if(p.getBounds().contains(m.getPoint()) || (p.getBounds().contains(lastPoint) && userPressed))
                         {
-                            p.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, panel.time);
+                            p.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, 0, panel.time);
                             frame.repaint();
                         }
                     }
@@ -63,7 +65,7 @@ public class emagSim extends JComponent
                     {
                         if(n.getBounds().contains(m.getPoint()) || (n.getBounds().contains(lastPoint) && userPressed))
                         {
-                            n.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, panel.time);
+                            n.addCoords(m.getPoint().x - lastPoint.x, m.getPoint().y - lastPoint.y, 0, panel.time);
                             frame.repaint();
                         }
                     }
@@ -88,7 +90,7 @@ class Panel extends JPanel {
     int window_x = 1600;
     int window_y = 900;
     boolean moveObjects = true;
-    double timeStep = 0.0000000000001;
+    double timeStep = 0.00000000001;
     double mpp = 2 * Math.pow(10, -18);//meters per pixel (1 femtometer is 10^-15 meters)
     emagSim parentSim;
     Point userMouse;
@@ -104,11 +106,14 @@ class Panel extends JPanel {
         //stable orbit is when neutrons and protons are 1.3 fm (10^-15 m) away from each other
         //1.3fm in terms of pixels is 1.3 * 10^-15 / mpp
         double ang = 2*Math.PI/3;
-        neutrons.add(new Neutron(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(0).x, 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(0).y, time));
+        Point3D rot1 = rotate(0, 0);
+        Point3D rot2 = rotate(ang, ang);
+        Point3D rot3 = rotate(2 * ang, 2 * ang);
+        neutrons.add(new Neutron(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot1.getX(), 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot1.getY(), rot1.getZ(),  time));
         //neutrons.add(new Neutron(1200, 450, time));
-        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(ang).x , 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(ang).y, time));
-        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(2 * ang).x, 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rotate(2 * ang).y, time));
-        electrons.add(new Electron(800 + 5.29177 * Math.pow(10, -11)/mpp, 700, time));
+        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot2.getX() , 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot2.getY(), rot2.getZ(), time));
+        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot3.getX(), 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot3.getY(), rot3.getZ(), time));
+        //electrons.add(new Electron(800 + 5.29177 * Math.pow(10, -11)/mpp, 700, 0, time));
         //electrons.add(new Electron(300, 900, time));
         //protons.add(new Proton(400, 400, time));
         //  protons.add(new Proton(600, 900, time));
@@ -151,39 +156,45 @@ class Panel extends JPanel {
             n.updateCenter();
         }
     }
-    public Point2D.Double rotate(double angle)
+    public Point3D rotate(double angleTheta, double anglePhi)
     {
-        return new Point2D.Double(Math.cos(angle), Math.sin(angle));
+        return new Point3D(Math.sin(anglePhi) * Math.cos(angleTheta), Math.cos(anglePhi) * Math.cos(angleTheta), -Math.sin(angleTheta));
     }
-    public Point2D.Double getForce(double x, double y, boolean strongForce, int charge)//x and y are in pixels
+    public Point3D getForce(double x, double y, double z, boolean strongForce, int charge)//x and y are in pixels
     {
         double fX = 0;
         double fY = 0;
+        double fZ = 0;
         for(Electron e: electrons)
         {
-            if(e.x != x && e.y != y)
+            if(e.x != x || e.y != y || e.z != z)
             {
                 double lightZepto = Math.pow((Math.pow(e.x - x, 2) + Math.pow(e.y - y, 2)), 0.5) * mpp / 299792458;//time it takes in zs (10^-21) for light to travel r pixels
                 //System.out.println(lightZepto);
                 Double[] posAtTime = e.getPosAtTime(time - lightZepto);
                 double r21X = posAtTime[0] - x;
                 double r21Y = posAtTime[1] - y;
-                double r212 = Math.pow(r21X, 2) + Math.pow(r21Y, 2);
+                double r21Z = posAtTime[2] - z;
+                double r212 = Math.pow(r21X, 2) + Math.pow(r21Y, 2) + Math.pow(r21Z, 2);
                 fX += charge * r21X / r212;
                 fY += charge * r21Y / r212;
+                fZ += charge * r21Z / r212;
             }
         }
         for(Proton p: protons)
         {
-            if(p.x != x && p.y != y)//not adding force of the same proton
+            //System.out.println(p.x + " " + p.y + " " + p.z);
+            if((p.x != x || p.y != y || p.z != z) && !Double.isNaN(p.x + p.y + p.z))//not adding force of the same proton
             {
                 double lightZepto = Math.pow((Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2)), 0.5)*mpp/299792458;
                 Double[] posAtTime = p.getPosAtTime(time - lightZepto);
                 double r21X = posAtTime[0] - x;
                 double r21Y = posAtTime[1] - y;
-                double r212 = Math.pow(r21X, 2) + Math.pow(r21Y, 2);
+                double r21Z = posAtTime[2] - z;
+                double r212 = Math.pow(r21X, 2) + Math.pow(r21Y, 2) + Math.pow(r21Z, 2);
                 fX -= charge * r21X / r212;
                 fY -= charge * r21Y / r212;
+                fZ -= charge * r21Z / r212;
                 //yukawa force from the strong interaction between nucleons
                 //double yukawaForce = getYukawaForce(Math.pow(10, -17) * Math.sqrt(Math.pow((p.x - x), 2) + Math.pow((p.y - y), 2)));
                 //if(Math.random() < 0.0005) {
@@ -191,16 +202,19 @@ class Panel extends JPanel {
                 //}
                 if(strongForce)
                 {
-                    double angBetween = Math.atan2((p.y - y), (p.x - x));
-                    double reidForce = getReidForce(Math.sqrt(Math.pow(mpp * (p.x - x), 2) + Math.pow(mpp * (p.y - y), 2)));
-                    fX -= reidForce * Math.cos(angBetween);
-                    fY -= reidForce * Math.sin(angBetween);
+                    double angBetweenTheta = Math.signum(p.y - y) * Math.acos((p.x - x)/Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2)));
+                    double angBetweenPhi = Math.acos((p.z - z)/Math.sqrt(Math.pow(p.x - x, 2) + Math.pow(p.y - y, 2) + Math.pow(p.z - z, 2)));
+                    double reidForce = getReidForce(Math.sqrt(Math.pow(mpp * (p.x - x), 2) + Math.pow(mpp * (p.y - y), 2) + Math.pow(mpp * (p.z - z), 2)));
+                    //System.out.println(reidForce);
+                    fX -= reidForce * Math.sin(angBetweenPhi) * Math.cos(angBetweenTheta);
+                    fY -= reidForce * Math.sin(angBetweenPhi) * Math.sin(angBetweenTheta);
+                    fZ -= reidForce * Math.cos(angBetweenPhi);
                 }
             }
         }
         for(Neutron n: neutrons)
         {
-            if(n.x != x && n.y != y)//not adding force of the same proton
+            if((n.x != x || n.y != y || n.z != z) && !Double.isNaN(n.x + n.y + n.z))//not adding force of the same proton
             {
                 double lightZepto = Math.pow((Math.pow(n.x - x, 2) + Math.pow(n.y - y, 2)), 0.5)*mpp/299792458;
                 Double[] posAtTime = n.getPosAtTime(time - lightZepto);
@@ -211,16 +225,23 @@ class Panel extends JPanel {
                 //}
                 if(strongForce)
                 {
-                    double angBetween = Math.atan2((n.y - y), (n.x - x));
-                    double reidForce = getReidForce(Math.sqrt(Math.pow(mpp * (n.x - x), 2) + Math.pow(mpp * (n.y - y), 2)));
-                    fX -= reidForce * Math.cos(angBetween);
-                    fY -= reidForce * Math.sin(angBetween);
+                    double angBetweenTheta = Math.signum(n.y - y) * Math.acos((n.x - x)/Math.sqrt(Math.pow(n.x - x, 2) + Math.pow(n.y - y, 2)));
+                    double angBetweenPhi = Math.acos((n.z - z)/Math.sqrt(Math.pow(n.x - x, 2) + Math.pow(n.y - y, 2) + Math.pow(n.z - z, 2)));
+                    double reidForce = getReidForce(Math.sqrt(Math.pow(mpp * (n.x - x), 2) + Math.pow(mpp * (n.y - y), 2) + Math.pow(mpp * (n.z - z), 2)));
+                    //System.out.println(x + " ajd");
+                    //System.out.println(reidForce);
+                    fX -= reidForce * Math.sin(angBetweenPhi) * Math.cos(angBetweenTheta);
+                    fY -= reidForce * Math.sin(angBetweenPhi) * Math.sin(angBetweenTheta);
+                    fZ -= reidForce * Math.cos(angBetweenPhi);
                 }
             }
         }
-        double magnitude = Math.pow(fX, 2) + Math.pow(fY, 2);//20*Math.random() + 1;
-        double angle = Math.atan2(fY, fX);//2*Math.PI*Math.random();
-        return new Point2D.Double(magnitude, angle);
+        double magnitude = Math.pow(fX, 2) + Math.pow(fY, 2) + Math.pow(fZ, 2);//20*Math.random() + 1;
+        double angleTheta = Math.signum(fY) * Math.acos(fX/Math.sqrt(Math.pow(fX, 2) + Math.pow(fY, 2)));
+        double anglePhi = Math.acos(fZ/Math.sqrt(Math.pow(fX, 2) + Math.pow(fY, 2) + Math.pow(fZ, 2)));
+        //System.out.println("?" + fX + " " + fY + " " + fZ);
+        //System.out.println("aodiwjsharter: " + magnitude + " " + angleTheta + " " + anglePhi);
+        return new Point3D(magnitude, angleTheta, anglePhi);
     }
     public double getYukawaForce(double radius)
     {
@@ -229,6 +250,7 @@ class Panel extends JPanel {
     }
     public double getReidForce(double radius)
     {
+        //System.out.println(radius);
         radius = radius * Math.pow(10, 15);
         double firstTerm = (1/radius) * (-10.463 * Math.exp(-radius) - 1650.6 * Math.exp(-4 * radius) + 6484.2 * Math.exp(-7 * radius));
         double secondTerm = -(10.463 * Math.exp(-radius) + 6602.4 * Math.exp(-4 * radius) - 45389.4 * Math.exp(-7 * radius));
@@ -237,12 +259,12 @@ class Panel extends JPanel {
     public void vector_to_rgb(Arrow i)
     {
         double maxMag = maxMagnitude();
-        i.angle = i.angle % (2 * Math.PI);
-        if (i.angle < 0)
+        i.angleTheta = i.angleTheta % (2 * Math.PI);
+        if (i.angleTheta < 0)
         {
-            i.angle += 2 * Math.PI;
+            i.angleTheta += 2 * Math.PI;
         }
-        i.color = hslToRGB((float)(180f*i.angle/Math.PI), (float) Math.pow(i.magnitude/maxMag, 0.25), (float) Math.pow(i.magnitude/maxMag, 0.25));
+        i.color = hslToRGB((float)(180f*i.angleTheta/Math.PI), (float) Math.pow(i.magnitude/maxMag, 0.25), (float) Math.pow(i.magnitude/maxMag, 0.25));
     }
     public Color hslToRGB(float h, float s, float l)
     {//h is [0,360) (deg), s is [0, 1] l is [0, 1]
@@ -291,7 +313,7 @@ class Panel extends JPanel {
         g.setFont(new Font("Calibri", Font.PLAIN, 30));
         g.setColor(new Color(120, 0, 200));
         userMouse = MouseInfo.getPointerInfo().getLocation();
-        Point2D.Double forceAtMouse = getForce(userMouse.getX(), userMouse.getY(), true, 1);
+        Point3D forceAtMouse = getForce(userMouse.getX(), userMouse.getY(), 0, true, 1);
         if(!Double.isNaN(forceAtMouse.getX()))
         {
             double shortenedForce = BigDecimal.valueOf(forceAtMouse.getX()).round(new MathContext(5)).doubleValue();
@@ -318,7 +340,7 @@ class Panel extends JPanel {
         g.drawString("10^-16 m (0.2 fm)", 1425, 870);
         g.drawString(time + " zeptoseconds (10^-21)", 50, 870);
         time += timeStep;
-        System.out.println(new Point2D.Double(protons.get(0).x, protons.get(0).y).distance(new Point2D.Double(neutrons.get(0).x, neutrons.get(0).y)));
+        //System.out.println(new Point3D(protons.get(0).x, protons.get(0).y, protons.get(0).z).distance(new Point3D(neutrons.get(0).x, neutrons.get(0).y, neutrons.get(0).z)));
         repaint();
 
     }
