@@ -28,7 +28,7 @@ public class FieldLine
             if(stopDrawing == -1 || stopDrawing == i + 1)
             {
                 //System.out.println(fieldX + " " + fieldY);
-                Point2D tempPoint = panel.getForce(fieldX, fieldY);
+                Point2D tempPoint = panel.getForce(fieldX, fieldY, false, 1);
                 FieldArrow currArrow = fieldArrows.get(i);
                 currArrow.magnitude = tempPoint.getX();
                 //System.out.println(i + " " + tempArrow.angle);
