@@ -42,9 +42,12 @@ public class Proton
         //System.out.println(x + " " + y + " " + z + "oadiwj");
         Point3D tempPoint = panel.getForce(x, y, z,true, charge);
         //System.out.println(tempPoint);
-        fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
-        fY += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
-        fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
+        if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
+        {
+            fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
+            fY += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
+            fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
+        }
         if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
         {
             x += fX * panel.timeStep * Math.pow(10, -21) / mass;
