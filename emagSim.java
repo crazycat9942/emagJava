@@ -1,12 +1,16 @@
 import javafx.geometry.Point3D;
 
 import javax.swing.*;
-import java.awt.*;
+import java.awt.Point;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Font;
+import java.awt.Dimension;
+import java.awt.MouseInfo;
 import java.awt.event.*;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.ArrayList;
-import java.awt.geom.Point2D;
 
 public class emagSim extends JComponent
 {
@@ -90,31 +94,33 @@ class Panel extends JPanel {
     int window_x = 1600;
     int window_y = 900;
     boolean moveObjects = true;
-    double timeStep = 0.00000000001;
-    double mpp = 2 * Math.pow(10, -18);//meters per pixel (1 femtometer is 10^-15 meters)
+    double timeStep = .0000000001;
+    double mpp = 100000 * Math.pow(10, -18);//meters per pixel (1 femtometer is 10^-15 meters)
     emagSim parentSim;
     Point userMouse;
-    //CONVERSION RATE: 1 pixel per 1*10^-18 meters
+    int frames;
+    Point3D tempCOM;//center of mass temp for testing
+    //CONVERSION RATE: 1 pixel per 2*10^-18 meters
     Panel(emagSim parent)
     {
         setBackground(Color.BLACK);
         setForeground(Color.WHITE);
-
         parentSim = parent;
         refreshScreen();
         setSize(window_x, window_y);//0.005
         //stable orbit is when neutrons and protons are 1.3 fm (10^-15 m) away from each other
         //1.3fm in terms of pixels is 1.3 * 10^-15 / mpp
-        double ang = 2*Math.PI/3;
-        Point3D rot1 = rotate(0, 0);
-        Point3D rot2 = rotate(ang, ang);
-        Point3D rot3 = rotate(2 * ang, 2 * ang);
-        neutrons.add(new Neutron(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot1.getX(), 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot1.getY(), rot1.getZ(),  time));
-        //neutrons.add(new Neutron(1200, 450, time));
-        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot2.getX() , 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot2.getY(), rot2.getZ(), time));
-        protons.add(new Proton(800 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot3.getX(), 450 + 1.3 * Math.pow(10, -15)/(2 * mpp) * rot3.getY(), rot3.getZ(), time));
-        //electrons.add(new Electron(800 + 5.29177 * Math.pow(10, -11)/mpp, 700, 0, time));
-        //electrons.add(new Electron(300, 900, time));
+        Point3D[] points = fibonacci_sphere(4);
+        double scaling = 0.55 * Math.pow(10, -15)/(mpp);
+        neutrons.add(new Neutron(points[0].multiply(scaling),  time));
+        protons.add(new Proton(points[1].multiply(scaling), time));
+        neutrons.add(new Neutron(points[2].multiply(scaling), time));
+        protons.add(new Proton(points[3].multiply(scaling), time));
+        tempCOM = centerOfMass();
+        points = fibonacci_sphere(2);
+        scaling = 0.5 * Math.pow(10, -10)/(mpp);
+        electrons.add(new Electron(points[0].multiply(scaling), time));
+        electrons.add(new Electron(points[1].multiply(scaling), time));
         //protons.add(new Proton(400, 400, time));
         //  protons.add(new Proton(600, 900, time));
         for(int i = 50; i < window_x; i = i + 50)
@@ -132,11 +138,25 @@ class Panel extends JPanel {
             i.update(g, this);
         }
     }
+    public void updateElectronForce()
+    {
+        for(Electron e: electrons)
+        {
+            e.updateForces(this);
+        }
+    }
     public void updateElectrons()
     {
         for(Electron e: electrons)
         {
             e.update(g, this);
+        }
+    }
+    public void updateProtonForce()
+    {
+        for(Proton p: protons)
+        {
+            p.updateForces(this);
         }
     }
     public void updateProtons()
@@ -148,6 +168,13 @@ class Panel extends JPanel {
             //p.drawFieldLines(g, this);
         }
     }
+    public void updateNeutronForce()
+    {
+        for(Neutron n: neutrons)
+        {
+            n.updateForces(this);
+        }
+    }
     public void updateNeutrons()
     {
         for(Neutron n: neutrons)
@@ -156,9 +183,21 @@ class Panel extends JPanel {
             n.updateCenter();
         }
     }
-    public Point3D rotate(double angleTheta, double anglePhi)
+    public Point3D[] fibonacci_sphere(int numPoints)
     {
-        return new Point3D(Math.sin(anglePhi) * Math.cos(angleTheta), Math.cos(anglePhi) * Math.cos(angleTheta), -Math.sin(angleTheta));
+        Point3D[] points = new Point3D[numPoints];
+        for(int i = 0; i < numPoints; i++)
+        {
+            double phi = Math.acos(1 -2.0 * i/numPoints);
+            double theta = Math.PI * (1 + Math.sqrt(5)) * i;
+
+            double x = Math.cos(theta) * Math.sin(phi);
+            double y = Math.sin(theta) * Math.sin(phi);
+            double z = Math.cos(phi);
+            points[i] = new Point3D(x, y, z);
+            //System.out.println(new Point3D(x, y, z).distance(new Point3D(0,0,0)));
+        }
+        return points;
     }
     public Point3D getForce(double x, double y, double z, boolean strongForce, int charge)//x and y are in pixels
     {
@@ -167,7 +206,7 @@ class Panel extends JPanel {
         double fZ = 0;
         for(Electron e: electrons)
         {
-            if(e.x != x || e.y != y || e.z != z)
+            if(e.x != x || e.y != y || e.z != z && !Double.isNaN(e.x + e.y + e.z))
             {
                 double lightZepto = Math.pow((Math.pow(e.x - x, 2) + Math.pow(e.y - y, 2)), 0.5) * mpp / 299792458;//time it takes in zs (10^-21) for light to travel r pixels
                 //System.out.println(lightZepto);
@@ -236,7 +275,7 @@ class Panel extends JPanel {
                 }
             }
         }
-        double magnitude = Math.pow(fX, 2) + Math.pow(fY, 2) + Math.pow(fZ, 2);//20*Math.random() + 1;
+        double magnitude = Math.sqrt(Math.pow(fX, 2) + Math.pow(fY, 2) + Math.pow(fZ, 2));//20*Math.random() + 1;
         double angleTheta = Math.signum(fY) * Math.acos(fX/Math.sqrt(Math.pow(fX, 2) + Math.pow(fY, 2)));
         double anglePhi = Math.acos(fZ/Math.sqrt(Math.pow(fX, 2) + Math.pow(fY, 2) + Math.pow(fZ, 2)));
         //System.out.println("?" + fX + " " + fY + " " + fZ);
@@ -302,14 +341,44 @@ class Panel extends JPanel {
         }
         return max;
     }
+    public Point3D centerOfMass()
+    {
+        double pMass = 1.67262192 * Math.pow(10, -27);
+        double nMass = 1.674927471 * Math.pow(10, -27);
+        double eMass = 9.1093897 * Math.pow(10, -31);
+        Point3D allMasses = new Point3D(0,0,0);
+        for(Proton p: protons)
+        {
+            allMasses = allMasses.add(p.getPos().multiply(pMass));
+        }
+        for(Neutron n: neutrons)
+        {
+            allMasses = allMasses.add(n.getPos().multiply(nMass));
+        }
+        for(Electron e: electrons)
+        {
+            allMasses = allMasses.add(e.getPos().multiply(eMass));
+        }
+        allMasses = allMasses.multiply(1/(protons.size()*pMass + neutrons.size()*nMass + electrons.size()*eMass));
+        return allMasses;
+    }
+    public void printPoint3D(Point3D point)
+    {
+        System.out.println("(" + point.getX() + ", " + point.getY() + ", " + point.getZ() + ")");
+    }
     @Override
     protected void paintComponent(Graphics gInit) {
         super.paintComponent(gInit);
         g = gInit;
+        updateElectronForce();
+        updateProtonForce();
+        updateNeutronForce();
         updateElectrons();
         updateProtons();
-        updateArrows();
         updateNeutrons();
+        updateArrows();
+        printPoint3D(centerOfMass().subtract(tempCOM));
+        tempCOM = centerOfMass();
         g.setFont(new Font("Calibri", Font.PLAIN, 30));
         g.setColor(new Color(120, 0, 200));
         userMouse = MouseInfo.getPointerInfo().getLocation();
@@ -338,8 +407,9 @@ class Panel extends JPanel {
         g.drawLine(1500, 850, 1500, 830);
         g.setFont(new Font("Calibri", Font.PLAIN, 15));
         g.drawString("10^-16 m (0.2 fm)", 1425, 870);
-        g.drawString(time + " zeptoseconds (10^-21)", 50, 870);
+        g.drawString(time + " zeptoseconds (10^-21)       " + frames + " frames", 50, 870);
         time += timeStep;
+        frames++;
         //System.out.println(new Point3D(protons.get(0).x, protons.get(0).y, protons.get(0).z).distance(new Point3D(neutrons.get(0).x, neutrons.get(0).y, neutrons.get(0).z)));
         repaint();
 
@@ -353,7 +423,7 @@ class Panel extends JPanel {
         });
         timer.setRepeats(true);
         // Aprox. 60 FPS
-        timer.setDelay(17);
+        //timer.setDelay(17);
         timer.start();
     }
     @Override
