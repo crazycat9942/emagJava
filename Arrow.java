@@ -1,8 +1,7 @@
 import javafx.geometry.Point3D;
 
 import java.awt.*;
-import java.awt.geom.Point2D;
-import java.math.*;
+
 public class Arrow
 {
     double angleTheta;
@@ -57,6 +56,7 @@ public class Arrow
     public void draw(Graphics g, Panel panel, Point userMouse)
     {
         Point3D tempPoint = panel.getForce(userMouse.x, userMouse.y, 0, true, 1);
+        //System.out.println(tempPoint);
         magnitude = tempPoint.getX();
         angleTheta = tempPoint.getY();
         anglePhi = tempPoint.getZ();
