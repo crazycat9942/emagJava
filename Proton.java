@@ -1,7 +1,6 @@
 import javafx.geometry.Point3D;
 
 import java.awt.*;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 public class Proton
@@ -37,22 +36,43 @@ public class Proton
         movements.add(new Double[]{x, y, z, time});
         times.add(time);
     }
-    public void update(Graphics g, Panel panel)
+    public Proton(Point3D initPos, double time)
     {
-        //System.out.println(x + " " + y + " " + z + "oadiwj");
+        x = initPos.getX() - 25 + 800;//because the only time the point version of the constructor is called is when it doesn't account for the mid of the screen
+        y = initPos.getY() - 25 + 450;
+        z = initPos.getZ() - 25;
+        centerX = initPos.getX();
+        centerY = initPos.getY();
+        centerZ = initPos.getZ();
+        for(int j = 0; j < fieldLineNum; j++)
+        {
+            fieldLines.add(new FieldLine(centerX + 5*Math.cos(j*2*Math.PI/fieldLineNum), centerY + 5*Math.sin(j*2*Math.PI/fieldLineNum)));
+        }
+        movements.add(new Double[]{x, y, z, time});
+        times.add(time);
+    }
+    public void updateForces(Panel panel)
+    {
         Point3D tempPoint = panel.getForce(x, y, z,true, charge);
-        //System.out.println(tempPoint);
+        //panel.printPoint3D(tempPoint);
         if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
         {
             fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
             fY += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
             fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
         }
+    }
+    public void update(Graphics g, Panel panel)
+    {
+        //fX *= 0.999;
+        //fY *= 0.999;
+        //fZ *= 0.999;
+        //System.out.println(fX);
         if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
         {
             x += fX * panel.timeStep * Math.pow(10, -21) / mass;
             y += fY * panel.timeStep * Math.pow(10, -21) / mass;
-            System.out.println(x + " " + y + " " + z + "m" + " q" + fX);
+            //System.out.println(x + " " + y + " " + z + "m" + " q" + fX);
             z += fZ * panel.timeStep * Math.pow(10, -21) / mass;
         }
         else if(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint))
@@ -97,6 +117,10 @@ public class Proton
         {
             i.drawFieldArrows(g, panel);
         }
+    }
+    public Point3D getPos()
+    {
+        return new Point3D(x, y, z);
     }
     public Double[] getPosAtTime(double time)
     {
