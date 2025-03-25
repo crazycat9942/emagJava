@@ -1,9 +1,7 @@
 import javafx.geometry.Point3D;
 
 import java.awt.*;
-import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class Electron
 {
@@ -24,6 +22,24 @@ public class Electron
         z = initZ - 25;
         movements.add(new Double[]{x, y, z, time});
         times.add(time);
+    }
+    public Electron(Point3D initPos, double time)
+    {
+        x = initPos.getX() - 25 + 800;//because the only time the point version of the constructor is called is when it doesn't account for the mid of the screen
+        y = initPos.getY() - 25 + 450;
+        z = initPos.getZ() - 25;
+        movements.add(new Double[]{x, y, z, time});
+        times.add(time);
+    }
+    public void updateForces(Panel panel)
+    {
+        Point3D tempPoint = panel.getForce(x, y, z, false, charge);
+        if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
+        {
+            fX += tempPoint.getX() * Math.cos(tempPoint.getY());
+            fY += tempPoint.getX() * Math.sin(tempPoint.getY());
+            fZ += tempPoint.getZ() * Math.sin(tempPoint.getZ());
+        }
     }
     public void update(Graphics g, Panel panel)
     {
@@ -64,6 +80,10 @@ public class Electron
     public Rectangle getBounds()
     {
         return new Rectangle((int)x - 25, (int)y, 50, 50);
+    }
+    public Point3D getPos()
+    {
+        return new Point3D(x, y, z);
     }
     public Double[] getPosAtTime(double time)
     {
