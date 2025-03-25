@@ -36,20 +36,13 @@ public class Electron
         Point3D tempPoint = panel.getForce(x, y, z, false, charge);
         if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
         {
-            fX += tempPoint.getX() * Math.cos(tempPoint.getY());
-            fY += tempPoint.getX() * Math.sin(tempPoint.getY());
-            fZ += tempPoint.getZ() * Math.sin(tempPoint.getZ());
+            fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
+            fY += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
+            fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
         }
     }
     public void update(Graphics g, Panel panel)
     {
-        Point3D tempPoint = panel.getForce(x, y, z, false, charge);
-        if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
-        {
-            fX += tempPoint.getX() * Math.cos(tempPoint.getY());
-            fY += tempPoint.getX() * Math.sin(tempPoint.getY());
-            fZ += tempPoint.getZ() * Math.sin(tempPoint.getZ());
-        }
         if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
         {
             x += fX * panel.timeStep * Math.pow(10, -21) / mass;
