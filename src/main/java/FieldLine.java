@@ -1,6 +1,6 @@
 import javafx.geometry.Point3D;
 
-import java.awt.*;
+import java.awt.Graphics;
 import java.util.ArrayList;
 
 public class FieldLine
