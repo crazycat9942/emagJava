@@ -1,8 +1,20 @@
 import javafx.geometry.Point3D;
 
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.Timer;
+import javax.swing.JPanel;
+import java.awt.Point;
+import java.awt.Color;
+import java.awt.BorderLayout;
+import java.awt.Graphics;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.MouseInfo;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.text.DecimalFormat;
@@ -114,12 +126,12 @@ class Panel extends JPanel {
         //stable orbit is when neutrons and protons are 1.3 fm (10^-15 m) away from each other
         //1.3fm in terms of pixels is 1.3 * 10^-15 / mpp
         //Point3D[] points = fibonacci_sphere(20);
-        Point3D[] points = fibonacci_sphere(4);
+        Point3D[] points = fibonacci_sphere(238);
         double scaling = 0.55 * Math.pow(10, -15)/(mpp);
         //double scaling = 7 * Math.pow(10, -15)/(mpp);
-        for(int i = 0; i < 4; i++)
+        for(int i = 0; i < 238; i++)
         {
-            if(i < 2)
+            if(i < 92)
             {
                 protons.add(new Proton(points[i].multiply(scaling), time, this));
             }
