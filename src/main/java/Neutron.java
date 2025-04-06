@@ -1,6 +1,8 @@
 import javafx.geometry.Point3D;
 
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Color;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 
 public class Neutron
