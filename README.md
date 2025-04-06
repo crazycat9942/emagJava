@@ -21,5 +21,6 @@ Clarifications:
 - Protons are represented with red circles, neutrons as white circles, and electrons as yellow circles.
   
 
-![emagGif](https://github.com/user-attachments/assets/9eac0a9e-e40c-48b0-8ecb-1635ae4bf33d)
+![19-17-02 (online-video-cutter com)(1)](https://github.com/user-attachments/assets/6e66551d-1095-457f-89ca-b6e80b85a3e2)
+
 Extremely idealized example of the simulation being used with a Uranium-238 nucleus
