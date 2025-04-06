@@ -1,8 +1,12 @@
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import net.miginfocom.swing.MigLayout;
 
-import javax.swing.*;
-import java.awt.*;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JTextArea;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.EventQueue;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 class Menu extends JFrame
