@@ -1,10 +1,12 @@
-Simulates the classical interactions of electrons, neutrons, and protons in a vacuum
+Simulates the classical (and limited quantum) interactions of electrons, neutrons, and protons in a vacuum
 
 -Supports electromagnetic force between protons and electrons
 -Supports strong nuclear force between protons and neutrons
+-Supports rendering of electron orbitals
 
 
 How to use:
+- to simulate electron orbitals and avoid getting an error, run the WaveFunction.java file first to create the desired electron wave function file thing of your choice and then run the Runner file
 - to add protons, neutrons, and electrons, uncomment lines in the panel constructor in emagSim or create your own with either specified coordinates or with points[n] from the fibonacci sphere method which evenly spaces points along a sphere
 - to change the flow of time, modify the timeStep variable in the emagSim.java panel constructor
 - to change the zoom, modify the mpp (meters per pixel) value in the emagSim.java panel constructor
@@ -24,3 +26,6 @@ Clarifications:
 ![19-17-02 (online-video-cutter com)(1)](https://github.com/user-attachments/assets/6e66551d-1095-457f-89ca-b6e80b85a3e2)
 
 Extremely idealized example of the simulation being used with a Uranium-238 nucleus
+
+![image](https://github.com/user-attachments/assets/fbe00678-0dc7-4aec-a7c3-3cbb22c20079)
+Electron orbitals for n = 4, l = 2, m = 2 electron wave function
