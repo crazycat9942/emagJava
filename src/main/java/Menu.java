@@ -1,9 +1,7 @@
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
 import net.miginfocom.swing.MigLayout;
 
-import javax.swing.JCheckBox;
-import javax.swing.JFrame;
-import javax.swing.JTextArea;
+import javax.swing.*;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.EventQueue;
@@ -18,6 +16,11 @@ class Menu extends JFrame
     JTextArea timeArea;
     JTextArea fpsArea;
     double lastTime;
+    JTextArea quatArea;
+    JSlider quatW;
+    JSlider quatI;
+    JSlider quatJ;
+    JSlider quatK;
     //JTextArea curlArea;
     //JTextArea divArea;
     //JTextArea magArea;
@@ -58,6 +61,20 @@ class Menu extends JFrame
         //zoomArea = new JTextArea();
         this.add(fpsArea);
         this.add(timeArea, "bottom");
+        quatArea = new JTextArea();
+        this.add(quatArea);
+        quatW = new JSlider(0,1000,1000);
+        quatW.setPreferredSize(new Dimension(150,10));
+        this.add(quatW);
+        quatI = new JSlider(0,1000,0);
+        quatI.setPreferredSize(new Dimension(150,10));
+        this.add(quatI);
+        quatJ = new JSlider(0,1000,0);
+        quatJ.setPreferredSize(new Dimension(150,10));
+        this.add(quatJ);
+        quatK = new JSlider(0,1000,0);
+        quatK.setPreferredSize(new Dimension(150,10));
+        this.add(quatK);
         /*this.add(curlArea);
         this.add(divArea);
         this.add(magArea);*/
@@ -100,9 +117,14 @@ class Menu extends JFrame
         timeArea.setText("time: " + panel.time + " zs (10^-21 s)");
         fpsArea.setText("FPS: " + df.format((1000.0/(System.currentTimeMillis() - lastTime))));
         lastTime = System.currentTimeMillis();
+        quatArea.setText("Quaternion: " + quatW.getValue()/1000. + " + " + quatI.getValue()/1000. + "i + " + quatJ.getValue()/1000. + "j + " + quatK.getValue()/1000. + "k");
         //zoomArea.setText("zoom: " + zoomSlider.getValue() + "x");
         //Arrow tempArrow = new Arrow(panel.axes.screenToCoordsX(panel.userMouse.x), panel.axes.screenToCoordsY(panel.userMouse.y), panel);
         //jacobArea.setText("Jacobian:\n   x  y  t\nP   " + tempArrow.DPDX + "  " + tempArrow.DPDY + "  3\nQ   4  5  6");
+    }
+    public double[] getQuaternion()
+    {
+        return new double[]{quatW.getValue()/1000., quatI.getValue()/1000., quatJ.getValue()/1000., quatK.getValue()/1000.};
     }
     /*private static JFreeChart createChart(XYDataset dataset) {
         NumberAxis xAxis = new NumberAxis("x Axis");
