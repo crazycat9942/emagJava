@@ -49,7 +49,7 @@ public class WaveFunction extends Electron
             ICsvListWriter listWriter = null;
             try
             {
-                listWriter = new CsvListWriter(new FileWriter("C:/Users/crazy/IdeaProjects/Testing/src/main/java/cDistInfo.csv"), CsvPreference.STANDARD_PREFERENCE);
+                listWriter = new CsvListWriter(new FileWriter("/src/main/java/cDistInfo.csv"), CsvPreference.STANDARD_PREFERENCE);
                 final String[] header = new String[] {"rStart","rEnd","thetaStart","thetaEnd","phiStart","phiEnd","cumulativeProb"};
                 listWriter.writeHeader(header);
 
@@ -110,7 +110,7 @@ public class WaveFunction extends Electron
         CSVReader reader = null;
         try
         {
-            reader = new CSVReader(new FileReader("C:/Users/crazy/IdeaProjects/Testing/src/main/java/cDistInfo.csv"));
+            reader = new CSVReader(new FileReader("/src/main/java/cDistInfo.csv"));
             String[] nextLine;
             reader.readNext();
             while ((nextLine = reader.readNext()) != null)
@@ -129,7 +129,7 @@ public class WaveFunction extends Electron
         String[] nextLine = new String[8];
         try
         {
-            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("C:/Users/crazy/IdeaProjects/Testing/src/main/java/cDistInfo.csv"));
+            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("/src/main/java/cDistInfo.csv"));
             //java.util.List<String[]> parsedRows = parser.parseAll();
             String temp = Arrays.toString(parsedRows.get(rowNum));
             temp = temp.substring(1, temp.length() - 1);
@@ -146,7 +146,7 @@ public class WaveFunction extends Electron
         double[][] output = new double[rowNums.length][7];
         try
         {
-            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("C:/Users/crazy/IdeaProjects/Testing/src/main/java/cDistInfo.csv"));
+            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("/src/main/java/cDistInfo.csv"));
             for(int i = 0; i < rowNums.length; i++)
             {
                 String temp = Arrays.toString(parsedRows.get(rowNums[i]));
