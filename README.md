@@ -6,7 +6,7 @@ Simulates the classical (and limited quantum) interactions of electrons, neutron
 
 
 How to use:
-- to simulate electron orbitals and avoid getting an error, run the WaveFunction.java file first to create the desired electron wave function file thing of your choice and then run the Runner file
+- to simulate electron orbitals and avoid getting an error, 1. change the constructor of the WaveFunction in the emagSim.java file as well as the q_n, q_l, and q_m to whatever numbers you want (they have to be the same) 2. run the WaveFunction.java file 3. Run the          Runner.java file
 - to add protons, neutrons, and electrons, uncomment lines in the panel constructor in emagSim or create your own with either specified coordinates or with points[n] from the fibonacci sphere method which evenly spaces points along a sphere
 - to change the flow of time, modify the timeStep variable in the emagSim.java panel constructor
 - to change the zoom, modify the mpp (meters per pixel) value in the emagSim.java panel constructor
