@@ -1,4 +1,5 @@
 import javafx.geometry.Point3D;
+import org.apache.commons.math3.complex.Quaternion;
 
 import javax.swing.JComponent;
 import javax.swing.JFrame;
@@ -104,9 +105,9 @@ class Panel extends JPanel {
     int window_x = 1600;
     int window_y = 900;
     boolean moveObjects = true;
-    double timeStep = .00000000005;
+    double timeStep = .0000000000005;
     Menu menu = new Menu(this);
-    double mpp = 0.2*Math.pow(10, -17);
+    double mpp = 4*Math.pow(10, -12);
     //double mpp = Math.pow(10, -17)/menu.zoomSlider.getValue();//meters per pixel (1 femtometer is 10^-15 meters)
     //double prevmpp = mpp;
     emagSim parentSim;
@@ -125,11 +126,11 @@ class Panel extends JPanel {
         setSize(window_x, window_y);//0.005
         //stable orbit is when neutrons and protons are 1.3 fm (10^-15 m) away from each other
         //1.3fm in terms of pixels is 1.3 * 10^-15 / mpp
-        //Point3D[] points = fibonacci_sphere(20);
-        Point3D[] points = fibonacci_sphere(238);
+        Point3D[] points = fibonacci_sphere(4);
+        //Point3D[] points = fibonacci_sphere(238);
         double scaling = 0.55 * Math.pow(10, -15)/(mpp);
         //double scaling = 7 * Math.pow(10, -15)/(mpp);
-        for(int i = 0; i < 238; i++)
+        /*for(int i = 0; i < 238; i++)
         {
             if(i < 92)
             {
@@ -139,17 +140,18 @@ class Panel extends JPanel {
             {
                 neutrons.add(new Neutron(points[i].multiply(scaling), time));
             }
-        }
+        }*/
+        electrons.add(new WaveFunction(4,2,0, time));
         /*neutrons.add(new Neutron(points[0].multiply(scaling),  time));
         protons.add(new Proton(points[1].multiply(scaling), time, this));
         neutrons.add(new Neutron(points[2].multiply(scaling), time));
-        protons.add(new Proton(points[3].multiply(scaling), time, this));
+        protons.add(new Proton(points[3].multiply(scaling), time, this));*/
         //electrons.add(new Electron(points[1].multiply(scaling), time));
         tempCOM = centerOfMass();
         points = fibonacci_sphere(2);
         scaling = 0.5 * Math.pow(10, -10)/(mpp);
-        electrons.add(new Electron(points[0].multiply(scaling), time));
-        electrons.add(new Electron(points[1].multiply(scaling), time));*/
+        //electrons.add(new Electron(points[0].multiply(scaling), time));
+        //electrons.add(new Electron(points[1].multiply(scaling), time));
         //protons.add(new Proton(400, 400, time));
         //  protons.add(new Proton(600, 900, time));
         for(int i = 50; i < window_x; i = i + 50)
@@ -171,7 +173,10 @@ class Panel extends JPanel {
     {
         for(Electron e: electrons)
         {
-            e.updateForces(this);
+            if(!(e instanceof WaveFunction))
+            {
+                //e.updateForces(this);
+            }
         }
     }
     public void updateElectrons()
@@ -615,10 +620,68 @@ class Panel extends JPanel {
     }
     public double coordsToScreenX(double coordX)
     {
-        return coordX * 0.5 * window_x/(0.5 * window_x * mpp) + 0.5 * window_x;
+        return (coordX * 0.5 * window_x/(0.5 * window_x * mpp)) + (0.5 * window_x);
+    }
+    public double coordsToScreenX(double coordX, double coordY, double coordZ)
+    {
+        double angleY = 4;//Math.toRadians(menu.rotateY.getValue());
+        return coordsToScreenX(Math.cos(angleY) * coordX)  + (coordsToScreenX(Math.sin(angleY) * coordZ)) - (double)window_x/2;
+    }
+    public double coordsToScreenX(Point3D initPoint)
+    {
+        return coordsToScreenX(initPoint.getX(), initPoint.getY(), initPoint.getZ());
     }
     public double coordsToScreenY(double coordY)
     {
-        return -0.5 * coordY * window_y / (0.5 * window_y * mpp) + 0.5 * window_y;
+        return (-0.5 * coordY * window_y / (0.5 * window_y * mpp)) + (0.5 * window_y);
+    }
+    public double coordsToScreenY(double coordX, double coordY, double coordZ)
+    {
+        double angleY = 4;//Math.toRadians(menu.rotateY.getValue());
+        //return (Math.sin(angleZ) * screenToCoordsX(coordX)) + (Math.cos(angleZ) * screenToCoordsY(coordY));
+        //return (-Math.sin(angleY) * (coordsToScreenX(coordX) - (double) window_x /2)) + (Math.cos(angleY) * (coordsToScreenY(coordY) - (double) window_y /2)) + (double)window_y/2;
+        return coordsToScreenY(coordY);
+    }
+    public double coordsToScreenY(Point3D initPoint)
+    {
+        return coordsToScreenY(initPoint.getX(), initPoint.getY(), initPoint.getZ());
+    }
+    public Point3D rotate(double x, double y, double z, double alpha, double beta, double gamma)
+    {//alpha is euler angle for rotating around x axis, beta for y, gamma for z
+        //does in order of x rotation matrix, then y, then z (non-commutative)
+        double[] tempQuat = menu.getQuaternion();
+        Quaternion q = new Quaternion(tempQuat[0], tempQuat[1], tempQuat[2], tempQuat[3]).normalize();
+        tempQuat = ((q.getInverse()).multiply(new Quaternion(0, x, y, z)).multiply(q)).getVectorPart();
+        return new Point3D(tempQuat[0], tempQuat[1], tempQuat[2]);
+        /*double[] output = new double[3];
+        output[0] = cos(beta) * cos(gamma) * x - cos(beta) * sin(gamma) * y + sin(beta) * z;
+        output[1] = (sin(alpha) * sin(beta) * cos(gamma) + cos(gamma)) * x - (sin(alpha) * sin(beta) * sin(gamma) + cos(alpha) * cos(gamma)) * y - sin(alpha) * cos(beta) * z;
+        output[2] = (-cos(alpha) * sin(beta) * cos(gamma) + sin(alpha) * sin(gamma)) * x + (cos(alpha) * sin(beta) * sin(gamma) + sin(alpha) * cos(gamma)) * y + cos(alpha) * cos(beta) * z;
+        return new Point3D(output[0], output[1], output[2]);*/
+    }
+    public Point3D[] rotate(Point3D[] initPoints)
+    {
+        double[] tempQuat = menu.getQuaternion();
+        Quaternion q = new Quaternion(tempQuat[0], tempQuat[1], tempQuat[2], tempQuat[3]).normalize();
+        Quaternion invQ = q.getInverse();
+        for(int i = 0; i < initPoints.length; i++)
+        {
+            Quaternion tempQuat2 = new Quaternion(0, initPoints[i].getX(), initPoints[i].getY(), initPoints[i].getZ());
+            double[] temp = invQ.multiply(tempQuat2).multiply(q).getVectorPart();
+            initPoints[i] = new Point3D(temp[0], temp[1], temp[2]);
+        }
+        return initPoints;
+    }
+    public Point3D rotate(double x, double y, double z)
+    {
+        return rotate(x, y, z,0,0,0);// Math.toRadians(menu.rotateX.getValue()), Math.toRadians(menu.rotateY.getValue()), Math.toRadians(menu.rotateZ.getValue()));
+    }
+    public double cos(double input)
+    {
+        return Math.cos(input);
+    }
+    public double sin(double input)
+    {
+        return Math.sin(input);
     }
 }
