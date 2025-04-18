@@ -43,13 +43,14 @@ public class WaveFunction extends Electron
     static double tempTime = System.nanoTime();
     static int subsections = 50;
     static double dS = maxR/subsections;
+    static File csvFile = new File("cDistInfo.csv");
     public static void main(String[] args)
     {
         try {
             ICsvListWriter listWriter = null;
             try
             {
-                listWriter = new CsvListWriter(new FileWriter("/src/main/java/cDistInfo.csv"), CsvPreference.STANDARD_PREFERENCE);
+                listWriter = new CsvListWriter(new FileWriter(csvFile), CsvPreference.STANDARD_PREFERENCE);
                 final String[] header = new String[] {"rStart","rEnd","thetaStart","thetaEnd","phiStart","phiEnd","cumulativeProb"};
                 listWriter.writeHeader(header);
 
@@ -110,7 +111,7 @@ public class WaveFunction extends Electron
         CSVReader reader = null;
         try
         {
-            reader = new CSVReader(new FileReader("/src/main/java/cDistInfo.csv"));
+            reader = new CSVReader(new FileReader(csvFile));
             String[] nextLine;
             reader.readNext();
             while ((nextLine = reader.readNext()) != null)
@@ -129,7 +130,7 @@ public class WaveFunction extends Electron
         String[] nextLine = new String[8];
         try
         {
-            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("/src/main/java/cDistInfo.csv"));
+            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader(csvFile));
             //java.util.List<String[]> parsedRows = parser.parseAll();
             String temp = Arrays.toString(parsedRows.get(rowNum));
             temp = temp.substring(1, temp.length() - 1);
@@ -146,7 +147,7 @@ public class WaveFunction extends Electron
         double[][] output = new double[rowNums.length][7];
         try
         {
-            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader("/src/main/java/cDistInfo.csv"));
+            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader(csvFile));
             for(int i = 0; i < rowNums.length; i++)
             {
                 String temp = Arrays.toString(parsedRows.get(rowNums[i]));
