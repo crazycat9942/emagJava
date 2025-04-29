@@ -14,7 +14,6 @@ How to use:
 - to evaluate the forces acting on a specific point, hover your cursor over the point. The magnitude of the force, direction (in degrees), and appropriate arrow vector will be at the top of the screen
 
 Clarifications:
-- Does not account for quantum mechanical observations (ex: electrons are not described with a wave function but instead with a classical representation of a point-like mass)
 - The fibonacci sphere method is included to easily space masses along the surface of a sphere so unstable nuclei are easier to avoid
 - The strong nuclear force is calculated with the negative derivative with respect to x of the reid potential (F = -dU/dx)
 - An alternative form of coloring (Hue, Saturation, Lightness) is used for the coloring of field arrows and converted to the more widely used Red Green Blue (RGB) coloring system. The formula to convert from HSL to RGB is given in the hslToRGB method, where s and l are doubles in the range [0, 1] and h is in the range [0, 360] for degrees
