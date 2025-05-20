@@ -31,12 +31,9 @@ public class WaveFunction extends Electron
     static double q_n = 4;
     static double q_l = 2;//azimuthal quantum number
     static double temp_l = q_l;
-    static double q_m = 0;//magnetic quantum number
+    static double q_m = 1;//magnetic quantum number
     final static double a_0 = 5.29177210544 * Math.pow(10, -11);//bohr radius (in meters)
-    static double tempTheta = 0;
-    static double tempPhi = 0;
-    static double tempR = 0;
-    static double maxR = 30 * a_0;
+    static double maxR = 40 * a_0;
     static double sqrtPart = -1;
     static double tempExp = Math.exp(-1/(q_n * a_0));
     static double tempFrame = 0;
@@ -44,6 +41,10 @@ public class WaveFunction extends Electron
     static int subsections = 50;
     static double dS = maxR/subsections;
     static File csvFile = new File("cDistInfo.csv");
+    static double[] cProbCol;
+    static double max;
+    static double[][] rows;
+    static int pointNum = 1000;
     public static void main(String[] args)
     {
         try {
@@ -55,9 +56,9 @@ public class WaveFunction extends Electron
                 listWriter.writeHeader(header);
 
                 double cumulativeProb = 0;
-                int sectionsR = 150;
-                int sectionsTheta = 50;
-                int sectionsPhi = 25;
+                int sectionsR = 10;
+                int sectionsTheta = 24;
+                int sectionsPhi = 12;
                 for(double r = 0; r < maxR; r += maxR/sectionsR)
                 {
                     for(double theta = 0; theta < 2 * Math.PI; theta += 2 * Math.PI / sectionsTheta)
@@ -87,23 +88,6 @@ public class WaveFunction extends Electron
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-    }
-    public static int indexBinarySearch(double[] probCol, int low, int high, double rand)
-    {//https://www.baeldung.com/java-binary-search
-        int index = Integer.MAX_VALUE;
-
-        while (low <= high) {
-            int mid = low  + ((high - low) / 2);
-            if (probCol[mid] < rand) {
-                low = mid + 1;
-            } else if (probCol[mid] > rand) {
-                high = mid - 1;
-            } else if ((mid != probCol.length - 1 && rand <= probCol[mid + 1] && rand >= probCol[mid]) || (rand <= probCol[mid])) {
-                index = mid;
-                break;
-            }
-        }
-        return index;
     }
     public static double[] getColumn(int columnNum)
     {
@@ -157,6 +141,25 @@ public class WaveFunction extends Electron
             return output;
         } catch (IOException e) {throw new RuntimeException(e);}
     }
+    public static double[][] getRows()
+    {
+        CsvParserSettings settings = new CsvParserSettings();
+        ColumnProcessor rowProcessor = new ColumnProcessor();
+        CsvParser parser = new CsvParser(settings);
+        settings.setProcessor(rowProcessor);
+        try
+        {
+            java.util.List<String[]> parsedRows = parser.parseAll(new FileReader(csvFile));
+            double[][] output = new double[parsedRows.size()][7];
+            for(int i = 1; i < parsedRows.size(); i++)
+            {
+                String temp = Arrays.toString(parsedRows.get(i));
+                temp = temp.substring(1, temp.length() - 1);
+                output[i] = Arrays.stream(temp.split(",")).mapToDouble(Double::parseDouble).toArray();
+            }
+            return output;
+        } catch (IOException e) {throw new RuntimeException(e);}
+    }
     public static double probLessThanABC(double a, double b, double c)
     {
         return probLessThanA(0, a) * probLessThanA(1, b) * probLessThanA(2, c);
@@ -175,9 +178,9 @@ public class WaveFunction extends Electron
         }
         return tempProb;
     }
-    public WaveFunction(double n, double l, double m, double time)
+    public WaveFunction(double n, double l, double m, double time, Panel panel)
     {
-        super(simulateUntilPoint(maxR), time);
+        super(simulateUntilPoint(maxR), time, panel);
         q_n = n;
         q_l = l;
         q_m = m;
@@ -186,23 +189,28 @@ public class WaveFunction extends Electron
     public void update(Graphics g, double time, Panel panel)
     {
         //System.out.println(x + " " + y);
-        double[] cProbCol = getColumn(6);
-        double max = cProbCol[cProbCol.length - 1];
-        cProbCol = Arrays.stream(cProbCol).map(i -> i/max).toArray();
+        pointNum = Integer.parseInt(panel.menu.pointNum.getText());
+        if(cProbCol == null)
+        {
+            cProbCol = getColumn(6);
+            max = cProbCol[cProbCol.length - 1];
+            cProbCol = Arrays.stream(cProbCol).map(i -> i/max).toArray();
+            rows = getRows();
+        }
         g.setColor(new Color(255,255,0));
-        Point3D[] points = new Point3D[100000];
+        Point3D[] points = new Point3D[pointNum];
         long startTime = System.nanoTime();
         int[] indices = new int[points.length];
         for(int i = 0; i < points.length; i++)
         {
             double rand = Math.random();
-            indices[i] = modifiedBinary(cProbCol, rand);
+            indices[i] = modifiedBinary(rand);
         }
-        double[][] rowsArr = getRow(indices);
         for(int i = 0; i < points.length; i++)
         {
-            Point3D tempPoint = sphericalToCartesian(new Point3D(rowsArr[i][0], rowsArr[i][2], rowsArr[i][4]));
-            Point3D tempPoint2 = sphericalToCartesian(new Point3D(rowsArr[i][1], rowsArr[i][3], rowsArr[i][5]));
+            double[] tempRow = rows[indices[i]];
+            Point3D tempPoint = sphericalToCartesian(new Point3D(tempRow[0], tempRow[2], tempRow[4]));
+            Point3D tempPoint2 = sphericalToCartesian(new Point3D(tempRow[1], tempRow[3], tempRow[5]));
             Point3D tempPoint3 = tempPoint2.subtract(tempPoint);
             tempPoint = tempPoint.add(new Point3D(Math.random() * tempPoint3.getX(), Math.random() * tempPoint3.getY(), Math.random() * tempPoint3.getZ()));
             points[i] = tempPoint;
@@ -210,19 +218,19 @@ public class WaveFunction extends Electron
         points = panel.rotate(points);
         for(int i = 0; i < points.length; i++)
         {
-            g.fillOval((int) (panel.coordsToScreenX(points[i].getX())), (int) (panel.coordsToScreenY(points[i].getY())), 2, 2);
+            g.fillOval((int) (panel.coordsToScreenX(points[i].getX())), (int) (panel.coordsToScreenY(points[i].getY())), 4, 4);
         }
         Graphics2D g2d = (Graphics2D)g;
         g2d.setStroke(new BasicStroke(5));
         Point3D tempPoint = panel.rotate(Math.pow(10, -9), 0, 0);
         g.setColor(new Color(100,100,200));
-        g.drawLine((int)(panel.window_x/2.0), (int)(panel.window_y/2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
+        g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
         tempPoint = panel.rotate(0, Math.pow(10, -9), 0);
         g.setColor(new Color(200, 100, 100));
-        g.drawLine((int)(panel.window_x/2.0), (int)(panel.window_y/2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
+        g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
         tempPoint = panel.rotate(0, 0, Math.pow(10, -9));
         g.setColor(new Color(100, 200, 100));
-        g.drawLine((int)(panel.window_x/2.0), (int)(panel.window_y/2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
+        g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
         //System.out.println((int)(panel.coordsToScreenX(tempPoint.getX())) + " :" + (int)(panel.coordsToScreenY(tempPoint.getY())));
         if(frames % 50 == 49 && movements.size() >= 20)
         {
@@ -233,25 +241,28 @@ public class WaveFunction extends Electron
         times.add(time);
         frames++;
     }
-    public static int modifiedBinary(double[] probCol, double randProb)
+    public static int modifiedBinary(double randProb)
     {
         int low = 0;
-        int high = probCol.length;
-        int pivot = probCol.length/2;
-        while(high >= low)
+        int high = cProbCol.length - 1;
+        int pivot;
+        while(low <= high)
         {
-            if(probCol[pivot] > randProb)
+            pivot = low + (high - low)/2;
+            if(cProbCol[pivot] > randProb)
             {
+                if(cProbCol[pivot - 1] <= randProb)
+                {
+                    return pivot;
+                }
                 high = pivot - 1;
-                pivot = (high + low)/2;
             }
-            else if(probCol[pivot] <= randProb)
+            else if(cProbCol[pivot] <= randProb)
             {
                 low = pivot + 1;
-                pivot = (high + low)/2;
             }
         }
-        return pivot + 1;
+        return -1;
     }
     public static ArrayList<Point3D> simulateProbability(int num_points, double max_r)//uses monte carlo hit-and-miss method
     {//https://compphys.notes.dmaitre.phyip3.dur.ac.uk/lectures/lecture-5/probability-distributions/
@@ -302,7 +313,7 @@ public class WaveFunction extends Electron
     }
     private static double integrateR(double min_r, double max_r, double theta, double phi)
     {
-        int subsectionsR = 5;
+        int subsectionsR = 10;
         double dr = (max_r - min_r)/subsectionsR;
         double total = 0;
         for(double r = min_r; r < max_r; r += dr)
@@ -325,7 +336,7 @@ public class WaveFunction extends Electron
     }
     public static double integrateTheta(double min_r, double max_r, double min_theta, double max_theta, double min_phi, double max_phi)
     {
-        int subsectionsTheta = 5;
+        int subsectionsTheta = 10;
         double dT = (Math.max(max_theta, min_theta) - Math.min(min_theta, max_theta))/subsectionsTheta;
         double total = 0;
         for(double theta = Math.min(min_theta, max_theta); theta < Math.max(max_theta, min_theta); theta += dT)

@@ -13,6 +13,7 @@ public class Arrow
     double x;
     double y;
     double length = 10;
+    double actualCharge = 1.602176634E-19;
     double endX;
     double endY;
     Color color;
@@ -24,11 +25,14 @@ public class Arrow
     }
     public void update(Graphics g, Panel panel)
     {
-        Point3D tempPoint = panel.getForce(x, y, 0, true, 1);
+        Point3D posPoint = panel.rotate(panel.STCX(x),panel.STCY(y),0);
+        posPoint = new Point3D(panel.STCX(x), panel.STCY(y),panel.centerOfMass().getZ());
+        Point3D tempPoint = panel.getForce(posPoint.getX(), posPoint.getY(), posPoint.getZ(), true, actualCharge);
+        //Point3D tempPoint = panel.getForce(x,y,0,true,1);
         if(tempPoint.getX() != 0)
         {
             magnitude = tempPoint.getX();
-            angleTheta = tempPoint.getY();
+            angleTheta = -tempPoint.getY();
             anglePhi = tempPoint.getZ();
             panel.vector_to_rgb(this);
             int endX = (int) (x + 2 * length * Math.cos(angleTheta));
@@ -63,12 +67,12 @@ public class Arrow
     public void draw(Graphics g, Panel panel, Point userMouse)
     {
         //Point3D tempPoint = panel.getForce2(panel.screenToCoordsX(userMouse.x), panel.screenToCoordsY(userMouse.y), 0, true, 1);
-        Point3D tempPoint = panel.getForce(userMouse.x, userMouse.y, 0, true, 1);
+        Point3D tempPoint = panel.getForce(panel.STCX(userMouse.x), panel.STCY(userMouse.y), panel.centerOfMass().getZ(), true, actualCharge);
         if(tempPoint.getX() != 0)
         {
             //System.out.println(tempPoint);
             magnitude = tempPoint.getX();
-            angleTheta = tempPoint.getY();
+            angleTheta = -tempPoint.getY();
             anglePhi = tempPoint.getZ();
             panel.vector_to_rgb(this);
             int endX = (int) (x + 2 * length * Math.cos(angleTheta));
