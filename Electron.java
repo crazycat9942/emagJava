@@ -1,39 +1,41 @@
 import javafx.geometry.Point3D;
 
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Color;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 
 public class Electron
 {
-    int charge = -1;
+    double actualCharge = -1.602176634E-19;
     double x;
     double y;
     double z;
     double fX;
     double fY;
     double fZ;
-    double mass = 9.1093897 * Math.pow(10, -31);
+    double coordX;
+    double coordY;
+    double coordZ;
+    double mass = 9.1093897E-31;
+    int frames = 0;
     ArrayList<Double[]> movements = new ArrayList<>();
     ArrayList<Double> times = new ArrayList<>();
-    public Electron(double initX, double initY, double initZ, double time)
-    {
-        x = initX - 25;
-        y = initY - 25;
-        z = initZ - 25;
-        movements.add(new Double[]{x, y, z, time});
-        times.add(time);
-    }
-    public Electron(Point3D initPos, double time)
+    public Electron(Point3D initPos, double time, Panel panel)
     {
         x = initPos.getX() - 25 + 800;//because the only time the point version of the constructor is called is when it doesn't account for the mid of the screen
         y = initPos.getY() - 25 + 450;
         z = initPos.getZ() - 25;
-        movements.add(new Double[]{x, y, z, time});
+        coordX = initPos.getX();
+        coordY = initPos.getY();
+        coordZ = initPos.getZ();
+        movements.add(new Double[]{coordX, coordY, coordZ, time});
         times.add(time);
+        frames++;
     }
     public void updateForces(Panel panel)
     {
-        Point3D tempPoint = panel.getForce(x, y, z, false, charge);
+        Point3D tempPoint = panel.getForce(coordX, coordY, coordZ, false, actualCharge);
         if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
         {
             fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
@@ -41,42 +43,51 @@ public class Electron
             fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
         }
     }
-    public void update(Graphics g, Panel panel)
+    public void update(Graphics g, double time, Panel panel)
     {
-        if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
+        if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint)))
         {
-            x += fX * panel.timeStep * Math.pow(10, -21) / mass;
-            y += fY * panel.timeStep * Math.pow(10, -21) / mass;
-            z += fZ * panel.timeStep * Math.pow(10, -21) / mass;
+            coordX += fX * panel.timeStep * Math.pow(10, -21) / mass;
+            coordY += fY * panel.timeStep * Math.pow(10, -21) / mass;
+            coordZ += fZ * panel.timeStep * Math.pow(10, -21) / mass;
         }
-        else if(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint))
+        else if(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint))
         {
             fX = 0;
             fY = 0;
             fZ = 0;
         }
-        movements.add(new Double[]{x,y,z,panel.time});
-        times.add(panel.time);
         g.setColor(new Color(255,255,0));
         //System.out.println(x + " " + y);
-        g.fillOval((int)x - 25, (int)y - 25, 50, 50);
+        //int tempRadius = Math.max(5,(int)(25*Math.pow(new Point3D(panel.camCoordX, panel.camCoordY, panel.camCoordZ).distance(getPos())/ panel.mpp, 0.5)/800));
+        int tempRadius = 25;
+        g.fillOval((int)panel.CTSX(coordX) - tempRadius, (int)panel.CTSY(coordY) - tempRadius, 2*tempRadius, 2*tempRadius);
+        if(frames % 50 == 49 && movements.size() >= 20)//clear list of previous locations once it gets to a certain size
+        {
+            movements = new ArrayList<>(movements.subList(movements.size() - 20, movements.size()));
+            times = new ArrayList<Double>(times.subList(movements.size() - 20, movements.size()));
+        }
+        movements.add(new Double[]{coordX, coordY, coordZ, time});
+        times.add(time);
+        frames++;
     }
     public void addCoords(double addX, double addY, double addZ, double time)
     {
-        x += addX;
-        y += addY;
-        z += addZ;
-        movements.add(new Double[]{x,y,z,time});
+        coordX += addX;
+        coordY += addY;
+        coordZ += addZ;
+        movements.add(new Double[]{coordX,coordY,coordZ,time});
         times.add(time);
+        frames++;
         //System.out.println(x + " " + y + " " + time);
     }
-    public Rectangle getBounds()
+    public Rectangle getBounds(Panel panel)
     {
-        return new Rectangle((int)x - 25, (int)y, 50, 50);
+        return new Rectangle((int)panel.CTSX(coordX) - 25, (int)panel.CTSY(coordY), 50, 50);
     }
     public Point3D getPos()
     {
-        return new Point3D(x, y, z);
+        return new Point3D(coordX, coordY, coordZ);
     }
     public Double[] getPosAtTime(double time)
     {
