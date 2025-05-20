@@ -11,6 +11,9 @@ public class Neutron
     double x;
     double y;
     double z;
+    double coordX;
+    double coordY;
+    double coordZ;
     double fX;
     double fY;
     double fZ;
@@ -24,41 +27,28 @@ public class Neutron
     ArrayList<FieldLine> fieldLines = new ArrayList<>();
     ArrayList<Double[]> movements = new ArrayList<>();
     ArrayList<Double> times = new ArrayList<>();
-    public Neutron(double initX, double initY, double initZ, double time)
-    {
-        x = initX - 25;
-        y = initY - 25;
-        z = initZ - 25;
-        centerX = initX;
-        centerY = initY;
-        centerZ = initZ;
-        for(int j = 0; j < fieldLineNum; j++)
-        {
-            fieldLines.add(new FieldLine(centerX + 5*Math.cos(j*2*Math.PI/fieldLineNum), centerY + 5*Math.sin(j*2*Math.PI/fieldLineNum)));
-        }
-        movements.add(new Double[]{x, y, z, time});
-        times.add(time);
-        frames++;
-    }
     public Neutron(Point3D initPos, double time)
     {
         x = initPos.getX() - 25 + 800;//because the only time the point version of the constructor is called is when it doesn't account for the mid of the screen
         y = initPos.getY() - 25 + 450;
         z = initPos.getZ() - 25;
+        coordX = initPos.getX();
+        coordY = initPos.getY();
+        coordZ = initPos.getZ();
         centerX = initPos.getX();
         centerY = initPos.getY();
         centerZ = initPos.getZ();
         for(int j = 0; j < fieldLineNum; j++)
         {
-            fieldLines.add(new FieldLine(centerX + 5*Math.cos(j*2*Math.PI/fieldLineNum), centerY + 5*Math.sin(j*2*Math.PI/fieldLineNum)));
+            fieldLines.add(new FieldLine(centerX + 5*Math.cos(j*2*Math.PI/fieldLineNum), centerY + 5*Math.sin(j*2*Math.PI/fieldLineNum), centerZ + 5*Math.sin(j*2*Math.PI/fieldLineNum)));
         }
-        movements.add(new Double[]{x, y, z, time});
+        movements.add(new Double[]{coordX, coordY, coordZ, time});
         times.add(time);
         frames++;
     }
     public void updateForces(Panel panel)
     {
-        Point3D tempPoint = panel.getForce(x, y, z, true, charge);
+        Point3D tempPoint = panel.getForce(coordX, coordY, coordZ, true, charge);
         if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
         {
             fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
@@ -71,13 +61,13 @@ public class Neutron
         //fX *= 0.999;
         //fY *= 0.999;
         //fZ *= 0.999;
-        if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint)))
+        if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint)))
         {
-            x += fX * panel.timeStep * Math.pow(10, -21) / mass;
-            y += fY * panel.timeStep * Math.pow(10, -21) / mass;
-            z += fZ * panel.timeStep * Math.pow(10, -21) / mass;
+            coordX += fX * panel.timeStep * Math.pow(10, -21) / mass;
+            coordY += fY * panel.timeStep * Math.pow(10, -21) / mass;
+            coordZ += fZ * panel.timeStep * Math.pow(10, -21) / mass;
         }
-        else if(panel.parentSim.userPressed && getBounds().contains(panel.parentSim.lastPoint))
+        else if(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint))
         {
             fX = 0;
             fY = 0;
@@ -85,13 +75,13 @@ public class Neutron
         }
         g.setColor(new Color(255,255,255));
         //System.out.println(x + " " + y);
-        g.fillOval((int)x - 25, (int)y - 25, 50, 50);
+        g.fillOval((int)panel.CTSX(coordX) - 25, (int)panel.CTSY(coordY) - 25, 50, 50);
         if(frames % 50 == 49 && movements.size() >= 20)
         {
             movements = new ArrayList<>(movements.subList(movements.size() - 20, movements.size()));
             times = new ArrayList<Double>(times.subList(movements.size() - 20, movements.size()));
         }
-        movements.add(new Double[]{x,y,z,time});
+        movements.add(new Double[]{coordX,coordY,coordZ,time});
         times.add(time);
         frames++;
     }
@@ -108,19 +98,19 @@ public class Neutron
     }
     public void addCoords(double addX, double addY, double addZ, double time)
     {
-        x += addX;
-        y += addY;
-        z += addZ;
+        coordX += addX;
+        coordY += addY;
+        coordZ += addZ;
         centerX += addX;
         centerY += addY;
         centerZ += addZ;
-        movements.add(new Double[]{x,y,z,time});
+        movements.add(new Double[]{coordX,coordY,coordZ,time});
         times.add(time);
         frames++;
     }
-    public Rectangle getBounds()
+    public Rectangle getBounds(Panel panel)
     {
-        return new Rectangle((int)x, (int)y, 50, 50);
+        return new Rectangle((int)panel.CTSX(coordX), (int)panel.CTSY(coordY), 50, 50);
     }
     public void drawFieldLines(Graphics g, Panel panel)
     {
@@ -131,7 +121,7 @@ public class Neutron
     }
     public Point3D getPos()
     {
-        return new Point3D(x, y, z);
+        return new Point3D(coordX, coordY, coordZ);
     }
     public Double[] getPosAtTime(double time)
     {
