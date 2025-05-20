@@ -1,10 +1,13 @@
 import com.formdev.flatlaf.themes.FlatMacDarkLaf;
+import javafx.geometry.Point3D;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.EventQueue;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 class Menu extends JFrame
@@ -13,6 +16,8 @@ class Menu extends JFrame
     ArrayList<JCheckBox> checkBoxes = new ArrayList<>();
     JCheckBox addStrongForce;
     JCheckBox addEmagForce;
+    JCheckBox fieldLines;
+    JCheckBox arrows;
     JTextArea timeArea;
     JTextArea fpsArea;
     double lastTime;
@@ -21,12 +26,16 @@ class Menu extends JFrame
     JSlider quatI;
     JSlider quatJ;
     JSlider quatK;
-    //JTextArea curlArea;
-    //JTextArea divArea;
-    //JTextArea magArea;
-    //JSlider zoomSlider;
+    JTextField pointNum;
+    JTextArea pointNumArea;
+    JTextArea timeStepArea;
+    JTextField timeStep;
+    JComboBox addParticle = new JComboBox();
+    JButton addPartButton = new JButton();
+    JButton clearAll = new JButton();
+    static JTextField zoomField;
     //JTextArea jacobArea;
-    //JTextArea zoomArea;
+    JTextArea zoomArea;
     public Menu(Panel panelInit)
     {
         panel = panelInit;
@@ -46,19 +55,21 @@ class Menu extends JFrame
         FlatMacDarkLaf.updateUI();
         addStrongForce = new JCheckBox("Strong force", true);
         addEmagForce = new JCheckBox("Electromagnetic force", true);
-        //zoomSlider = new JSlider(1, 10);
         //System.out.println(colorWithCurl.isSelected());
         ml.setLayoutConstraints("width 200px!, wrap");
         this.add(addStrongForce);
         //gbc.gridy = GridBagConstraints.FIRST_LINE_END;
         this.add(addEmagForce);
+        fieldLines = new JCheckBox("Field lines", true);
+        this.add(fieldLines);
+        arrows = new JCheckBox("Arrows", true);
+        this.add(arrows);
         timeArea = new JTextArea("time: " + panel.time + " zs (10^-21 s)");
         fpsArea = new JTextArea();
         /*curlArea = new JTextArea();
         divArea = new JTextArea();
         magArea = new JTextArea();
         jacobArea = new JTextArea();*/
-        //zoomArea = new JTextArea();
         this.add(fpsArea);
         this.add(timeArea, "bottom");
         quatArea = new JTextArea();
@@ -75,11 +86,62 @@ class Menu extends JFrame
         quatK = new JSlider(0,1000,0);
         quatK.setPreferredSize(new Dimension(150,10));
         this.add(quatK);
+        pointNumArea = new JTextArea("Number of points:");
+        this.add(pointNumArea);
+        pointNum = new JTextField("1000");
+        this.add(pointNum);
+        timeStepArea = new JTextArea("timestep:");
+        this.add(timeStepArea);
+        timeStep = new JTextField(String.valueOf(panel.timeStep));
+        this.add(timeStep);
+        addParticle = new JComboBox(new String[]{"Add Proton", "Add Neutron", "Add Electron"});
+        addParticle.setToolTipText("Add a particle at a certain position");
+        this.add(addParticle);
+        addPartButton = new JButton("Add");
+        this.add(addPartButton);
+        addPartButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Object temp;
+                String text = String.valueOf(addParticle.getSelectedItem());
+                Point3D tempPoint = new Point3D(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5);
+                tempPoint = tempPoint.multiply(1/Math.sqrt(Math.pow(tempPoint.getX(), 2) + Math.pow(tempPoint.getY(), 2) + Math.pow(tempPoint.getZ(), 2)));
+                tempPoint = tempPoint.multiply(0.3 * panel.mpp * 900);
+                if(text.contains("Proton"))
+                {
+                    temp = new Proton(tempPoint, panel.time, panel);
+                    panel.protons.add((Proton)temp);
+                }
+                else if(text.contains("Neutron"))
+                {
+                    temp = new Neutron(tempPoint, panel.time);
+                    panel.neutrons.add((Neutron)temp);
+                }
+                else
+                {
+                    temp = new Electron(tempPoint, panel.time, panel);
+                    panel.electrons.add((Electron)temp);
+                }
+            }
+        });
         /*this.add(curlArea);
         this.add(divArea);
         this.add(magArea);*/
-        //this.add(zoomArea);
-        //this.add(zoomSlider);
+        zoomArea = new JTextArea("zoom:");
+        System.out.println(panel.mpp);
+        zoomField = new JTextField(String.valueOf(panel.mpp));
+        this.add(zoomArea);
+        this.add(zoomField);
+        clearAll = new JButton("Clear all charges");
+        this.add(clearAll);
+        clearAll.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                panel.electrons.clear();
+                panel.protons.clear();
+                panel.neutrons.clear();
+            }
+        });
         //this.add(new JTextArea("Legend"));
         //PaintScaleLegend
         //jacobArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 10));
@@ -118,7 +180,16 @@ class Menu extends JFrame
         fpsArea.setText("FPS: " + df.format((1000.0/(System.currentTimeMillis() - lastTime))));
         lastTime = System.currentTimeMillis();
         quatArea.setText("Quaternion: " + quatW.getValue()/1000. + " + " + quatI.getValue()/1000. + "i + " + quatJ.getValue()/1000. + "j + " + quatK.getValue()/1000. + "k");
-        //zoomArea.setText("zoom: " + zoomSlider.getValue() + "x");
+        panel.timeStep = Double.parseDouble(timeStep.getText());
+        //zoomField.setText(String.valueOf(panel.mpp));
+        //System.out.println(zoomField.getText());
+        if(Double.parseDouble(zoomField.getText()) != 0 && panel.prevmpp != panel.mpp) {
+            panel.prevmpp = panel.mpp;
+            panel.mpp = Double.parseDouble(zoomField.getText());
+            panel.updateZoom();
+            panel.prevmpp = panel.mpp;
+            zoomArea.setText("zoom: " + zoomField.getText());
+        }
         //Arrow tempArrow = new Arrow(panel.axes.screenToCoordsX(panel.userMouse.x), panel.axes.screenToCoordsY(panel.userMouse.y), panel);
         //jacobArea.setText("Jacobian:\n   x  y  t\nP   " + tempArrow.DPDX + "  " + tempArrow.DPDY + "  3\nQ   4  5  6");
     }
@@ -126,71 +197,4 @@ class Menu extends JFrame
     {
         return new double[]{quatW.getValue()/1000., quatI.getValue()/1000., quatJ.getValue()/1000., quatK.getValue()/1000.};
     }
-    /*private static JFreeChart createChart(XYDataset dataset) {
-        NumberAxis xAxis = new NumberAxis("x Axis");
-        NumberAxis yAxis = new NumberAxis("y Axis");
-        XYPlot plot = new XYPlot(dataset, xAxis, yAxis, null);
-        XYBlockRenderer r = new XYBlockRenderer();
-        r.setDefaultToolTipGenerator(new StandardXYToolTipGenerator());
-        test.SpectrumPaintScale ps = new test.SpectrumPaintScale(0, 1);
-        r.setPaintScale(ps);
-        plot.setRenderer(r);
-        JFreeChart chart = new JFreeChart("Title",
-                JFreeChart.DEFAULT_TITLE_FONT, plot, false);
-        NumberAxis scaleAxis = new NumberAxis("Scale");
-        scaleAxis.setAxisLinePaint(Color.white);
-        scaleAxis.setTickMarkPaint(Color.white);
-        PaintScaleLegend legend = new PaintScaleLegend(ps, scaleAxis);
-        legend.setSubdivisionCount(10);
-        legend.setAxisLocation(AxisLocation.TOP_OR_RIGHT);
-        legend.setPadding(new RectangleInsets(25, 10, 50, 10));
-        legend.setStripWidth(20);
-        legend.setPosition(RectangleEdge.RIGHT);
-        legend.setBackgroundPaint(Color.WHITE);
-        chart.addSubtitle(legend);
-        chart.setBackgroundPaint(Color.white);
-        return chart;
-    }
-    private static XYZDataset createDataset() {
-        DefaultXYZDataset dataset = new DefaultXYZDataset();
-        double[][] data = new double[3][128 * 128];
-        for (int i = 0; i < 128 * 128; i++) {
-            var x = i % 128;
-            var y = i / 128;
-            data[0][i] = x;
-            data[1][i] = y;
-            data[2][i] = x * y;
-        }
-        dataset.addSeries("Series", data);
-        return dataset;
-    }
-}
-class SpectrumPaintScale implements PaintScale {
-
-    private static final float H1 = 0f;
-    private static final float H2 = 1f;
-    private final double lowerBound;
-    private final double upperBound;
-
-    public SpectrumPaintScale(double lowerBound, double upperBound) {
-        this.lowerBound = lowerBound;
-        this.upperBound = upperBound;
-    }
-
-    @Override
-    public double getLowerBound() {
-        return lowerBound;
-    }
-
-    @Override
-    public double getUpperBound() {
-        return upperBound;
-    }
-
-    @Override
-    public Paint getPaint(double value) {
-        float scaledValue = (float) (value / (getUpperBound() - getLowerBound()));
-        float scaledH = H1 + scaledValue * (H2 - H1);
-        return Color.getHSBColor(scaledH, 1f, 1f);
-    }*/
 }
