@@ -3,20 +3,18 @@ import javafx.geometry.Point3D;
 import java.awt.Graphics;
 import java.awt.Color;
 import java.awt.Rectangle;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 public class Neutron
-{
-    int charge = 0;
-    double x;
-    double y;
-    double z;
+{/// method and variable explanations in electron class
+    double actualCharge = 0;
     double coordX;
     double coordY;
     double coordZ;
-    double fX;
-    double fY;
-    double fZ;
+    double vX;
+    double vY;
+    double vZ;
     double mass = 1.674927471 * Math.pow(10, -27);
     double centerX;
     double centerY;
@@ -24,14 +22,12 @@ public class Neutron
     int fieldArrowNum = 50;
     int fieldLineNum = 6;
     int frames = 0;
+    Point2D.Double drawnCoords;
     ArrayList<FieldLine> fieldLines = new ArrayList<>();
     ArrayList<Double[]> movements = new ArrayList<>();
     ArrayList<Double> times = new ArrayList<>();
     public Neutron(Point3D initPos, double time)
     {
-        x = initPos.getX() - 25 + 800;//because the only time the point version of the constructor is called is when it doesn't account for the mid of the screen
-        y = initPos.getY() - 25 + 450;
-        z = initPos.getZ() - 25;
         coordX = initPos.getX();
         coordY = initPos.getY();
         coordZ = initPos.getZ();
@@ -42,18 +38,45 @@ public class Neutron
         {
             fieldLines.add(new FieldLine(centerX + 5*Math.cos(j*2*Math.PI/fieldLineNum), centerY + 5*Math.sin(j*2*Math.PI/fieldLineNum), centerZ + 5*Math.sin(j*2*Math.PI/fieldLineNum)));
         }
-        movements.add(new Double[]{coordX, coordY, coordZ, time});
+        movements.add(new Double[]{coordX, coordY, coordZ, time, (double)movements.size()});
         times.add(time);
         frames++;
     }
     public void updateForces(Panel panel)
     {
-        Point3D tempPoint = panel.getForce(coordX, coordY, coordZ, true, charge);
+        //Point3D tempPoint = panel.getForce(x, y, z,true, charge);
+        Point3D tempPoint = panel.getForce(coordX, coordY, coordZ, true, actualCharge, this);
+        //panel.printPoint3D(tempPoint);
         if(!Double.isNaN(tempPoint.getY() + tempPoint.getZ()))
         {
-            fX += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
-            fY += tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
-            fZ += tempPoint.getX() * Math.cos(tempPoint.getZ());
+            Point3D v = new Point3D(vX, vY, vZ);
+            double c = 299792458;
+            double c2 = Math.pow(c, 2);
+
+            double temp1 = tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.cos(tempPoint.getY());
+            double temp2 = tempPoint.getX() * Math.sin(tempPoint.getZ()) * Math.sin(tempPoint.getY());
+            double temp3 = tempPoint.getX() * Math.cos(tempPoint.getZ());
+
+            if(panel.menu.posRel.isSelected()) {
+                Point3D uPrime = new Point3D(temp1, temp2, temp3);
+
+                Point3D uPrimePara = new Point3D(uPrime.getX(), 0, 0);
+                Point3D uPrimePerp = new Point3D(0, uPrime.getY(), uPrime.getZ());
+
+                Point3D uPara = (uPrimePara.add(v)).multiply(1 / (1 + (v.dotProduct(uPrimePara) / c2)));
+                Point3D uPerp = uPrimePerp.multiply(Math.sqrt(1 - Math.pow(v.magnitude() / c, 2))).multiply(1 / (1 + (v.dotProduct(uPrimePara) / c2)));
+                Point3D u = uPara.add(uPerp);
+
+                vX = u.getX();
+                vY = u.getY();
+                vZ = u.getZ();
+            }
+            else
+            {
+                vX += temp1;
+                vY += temp2;
+                vZ += temp3;
+            }
         }
     }
     public void update(Graphics g, Panel panel, double time)
@@ -63,38 +86,38 @@ public class Neutron
         //fZ *= 0.999;
         if(panel.moveObjects && !(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint)))
         {
-            coordX += fX * panel.timeStep * Math.pow(10, -21) / mass;
-            coordY += fY * panel.timeStep * Math.pow(10, -21) / mass;
-            coordZ += fZ * panel.timeStep * Math.pow(10, -21) / mass;
+            coordX += vX * panel.timeStep;
+            coordY += vY * panel.timeStep;
+            coordZ += vZ * panel.timeStep;
         }
         else if(panel.parentSim.userPressed && getBounds(panel).contains(panel.parentSim.lastPoint))
         {
-            fX = 0;
-            fY = 0;
-            fZ = 0;
+            vX = 0;
+            vY = 0;
+            vZ = 0;
         }
         g.setColor(new Color(255,255,255));
+        int tempRadius = 25;
+        Point3D shiftedPos = getPos();
+        shiftedPos = panel.rotatePoint3(shiftedPos, panel.camPitch, panel.camYaw);
         //System.out.println(x + " " + y);
-        g.fillOval((int)panel.CTSX(coordX) - 25, (int)panel.CTSY(coordY) - 25, 50, 50);
+        drawnCoords = new Point2D.Double(panel.mpp*panel.CTSX(shiftedPos.getX()) - tempRadius, panel.mpp*panel.CTSY(shiftedPos.getY()) - tempRadius);
+        g.fillOval((int) panel.CTSX(shiftedPos.getX()) - tempRadius, (int) panel.CTSY(shiftedPos.getY()) - tempRadius, 2 * tempRadius, 2 * tempRadius);
+        //g.fillOval((int)panel.CTSX(coordX) - 25, (int)panel.CTSY(coordY) - 25, 50, 50);
         if(frames % 50 == 49 && movements.size() >= 20)
         {
             movements = new ArrayList<>(movements.subList(movements.size() - 20, movements.size()));
             times = new ArrayList<Double>(times.subList(movements.size() - 20, movements.size()));
         }
-        movements.add(new Double[]{coordX,coordY,coordZ,time});
+        movements.add(new Double[]{coordX,coordY,coordZ,time, (double)movements.size()});
         times.add(time);
         frames++;
     }
-    public void updateCenter()
+    public void updateCenter(Panel panel)
     {
-        centerX = x;
-        centerY = y;
-        centerZ = z;
-        for(int j = 0; j < fieldLineNum; j++)
-        {
-            fieldLines.get(j).startX = centerX + 35*Math.cos(j*2*Math.PI/fieldLineNum);
-            fieldLines.get(j).startY = centerY + 35*Math.sin(j*2*Math.PI/fieldLineNum);
-        }
+        centerX = coordX;
+        centerY = coordY;
+        centerZ = coordZ;
     }
     public void addCoords(double addX, double addY, double addZ, double time)
     {
@@ -104,7 +127,7 @@ public class Neutron
         centerX += addX;
         centerY += addY;
         centerZ += addZ;
-        movements.add(new Double[]{coordX,coordY,coordZ,time});
+        movements.add(new Double[]{coordX,coordY,coordZ,time, (double)movements.size()});
         times.add(time);
         frames++;
     }
@@ -123,15 +146,40 @@ public class Neutron
     {
         return new Point3D(coordX, coordY, coordZ);
     }
-    public Double[] getPosAtTime(double time)
+    public Point3D getPosAtTime(double time)
     {
         for(int i = 1; i < times.size(); i++)
         {
             if(times.get(i) > time)
             {
-                return movements.get(i-1);
+                Double[] temp = movements.get(i-1);
+                return new Point3D(temp[0], temp[1], temp[2]);
             }
         }
-        return movements.getLast();
+        Double[] temp = movements.getLast();
+        return new Point3D(temp[0], temp[1], temp[2]);
+    }
+    public double[] getPosAndIndexAtTime(double time)
+    {
+        for(int i = 1; i < times.size(); i++)
+        {
+            if(times.get(i) > time)
+            {
+                Double[] temp = movements.get(i-1);
+                return new double[]{temp[0], temp[1], temp[2], temp[3], temp[4]};
+            }
+        }
+        Double[] temp = movements.getLast();
+        return new double[]{temp[0], temp[1], temp[2], temp[3], temp[4]};
+    }
+    public Point3D getVelocityAtTime(double time, Panel panel)
+    {
+        double[] temp1 = getPosAndIndexAtTime(time);
+        double[] temp2 = getPosAndIndexAtTime(time - panel.timeStep);
+        double dt = time - temp2[3];
+
+        Point3D v1 = new Point3D(temp1[0], temp1[1], temp1[2]);
+        Point3D v2 = new Point3D(temp2[0], temp2[1], temp2[2]);
+        return (v1.subtract(v2)).multiply(1/dt);
     }
 }
