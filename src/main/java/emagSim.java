@@ -185,37 +185,8 @@ class Panel extends JPanel {
         //stable orbit is when neutrons and protons are 1.3 fm (10^-15 m) away from each other
         //1.3fm in terms of pixels is 1.3 * 10^-15 / mpp
         Point3D[] points = fibonacci_sphere(4);
-        //Point3D[] points = fibonacci_sphere(238);
-        //double scaling = 7 * Math.pow(10, -15)/(mpp);
-        /*for(int i = 0; i < 238; i++)
-        {
-            if(i < 92)
-            {
-                protons.add(new Proton(points[i].multiply(scaling), time, this));
-            }
-            else
-            {
-                neutrons.add(new Neutron(points[i].multiply(scaling), time));
-            }
-        }*/
-        //protons.add(new Proton(new Point3D(-scaling, 0, 0), time, this));
-        //protons.add(new Proton(new Point3D(scaling, 0, 0), time, this));
-        //electrons.add(new Electron(new Point3D(scaling, 0, 0), time, this));
-        //electrons.add(new Electron(new Point3D(scaling, scaling, 0), time, this));
-        //electrons.add(new Electron(new Point3D(0,0,0), time, this));
-        //electrons.add(new WaveFunction(2,1,0, time));
-        //neutrons.add(new Neutron(points[0].multiply(scaling),  time));
-        //protons.add(new Proton(points[1].multiply(scaling), time, this));
-        //neutrons.add(new Neutron(points[2].multiply(scaling), time));
-        //protons.add(new Proton(points[3].multiply(scaling), time, this));
-        //electrons.add(new Electron(points[1].multiply(scaling), time));
         tempCOM = centerOfMass();
         points = fibonacci_sphere(2);
-        //scaling = 0.5 * Math.pow(10, -10)/(mpp);
-        //electrons.add(new Electron(points[0].multiply(scaling), time));
-        //electrons.add(new Electron(points[1].multiply(scaling), time));
-        //protons.add(new Proton(400, 400, time));
-        //  protons.add(new Proton(600, 900, time));
         for(int i = 50; i < windowX; i = i + 50)
         {
             for(int j = 50; j < windowY; j = j + 50)
@@ -317,12 +288,6 @@ class Panel extends JPanel {
         return new Point3D(magnitude, angleTheta, anglePhi);
     }
 
-    /*
-    public double getYukawaForce(double radius)
-    {
-        double constantVal = 8.331318496 * Math.pow(10, -12);
-        return -constantVal * Math.exp(-radius/(1.4135170512 * Math.pow(10, -15))) * ((1.4135170512 * Math.pow(10, -15)/Math.pow(radius, 2)) + 1/radius);
-    }*/
     public double getReidForce(double radius)
     {
         //System.out.println(radius);
@@ -369,10 +334,6 @@ class Panel extends JPanel {
         super.paintComponent(gInit);
         g = gInit;
         menu.update(g);
-        //prevmpp = mpp;
-        //mpp = Math.pow(10, -17)/(menu.zoomSlider.getValue());
-        //System.out.println(menu.zoomSlider.getValue());
-        //updateZoom();
         updateElectronForce();
         updateProtonForce();
         updateNeutronForce();
@@ -382,11 +343,6 @@ class Panel extends JPanel {
         if(menu.arrows.isSelected()) {
             updateArrows();
         }
-       //System.out.println("aowd:" + screenToCoordsX(800) + " " + screenToCoordsY(450) + " " + parentSim.centerX + " " + parentSim.centerY);
-        //System.out.println("oaijdw: " + CTSX(electrons.getFirst().coordX) + " " + CTSY(electrons.getFirst().coordY) + " " + electrons.getFirst().getPos());
-        //printPoint3D(electrons.get(0).getPos());
-
-        //printPoint3D(centerOfMass().subtract(tempCOM));
         tempCOM = centerOfMass();
         g.setFont(new Font("Calibri", Font.PLAIN, 30));
         g.setColor(new Color(120, 0, 200));
