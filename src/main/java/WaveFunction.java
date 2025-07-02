@@ -6,8 +6,6 @@ import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.differentiation.FiniteDifferencesDifferentiator;
 import org.apache.commons.math3.analysis.differentiation.UnivariateDifferentiableFunction;
 import org.apache.commons.math3.complex.Complex;
-import org.apache.commons.math3.linear.FieldMatrix;
-import org.apache.commons.math3.linear.Array2DRowFieldMatrix;
 import org.apache.commons.math3.analysis.differentiation.DerivativeStructure;
 import javafx.geometry.Point3D;
 import com.opencsv.CSVReader;
@@ -16,7 +14,10 @@ import org.supercsv.io.ICsvListWriter;
 import org.supercsv.prefs.CsvPreference;
 import com.univocity.parsers.csv.CsvParserSettings;
 
-import java.awt.*;
+import java.awt.Graphics;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.BasicStroke;
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -25,17 +26,14 @@ import java.util.Arrays;
 //theta is polar and phi is azimuthal (going from z axis to plane made by x and y axes)
 public class WaveFunction extends Electron
 {
-    FieldMatrix<Complex> sigma_1 = new Array2DRowFieldMatrix<>(new Complex[][]{{Complex.ZERO, Complex.ONE}, {Complex.ONE, Complex.ZERO}});
-    FieldMatrix<Complex> sigma_2 = new Array2DRowFieldMatrix<>(new Complex[][]{{Complex.ZERO, Complex.I.negate()}, {Complex.I, Complex.ZERO}});
-    FieldMatrix<Complex> sigma_3 = new Array2DRowFieldMatrix<>(new Complex[][]{{Complex.ONE, Complex.ZERO}, {Complex.ZERO, Complex.ONE.negate()}});
-    static double q_n = 4;
-    static double q_l = 2;//azimuthal quantum number
-    static double temp_l = q_l;
-    static double q_m = 1;//magnetic quantum number
-    final static double a_0 = 5.29177210544 * Math.pow(10, -11);//bohr radius (in meters)
-    static double maxR = 40 * a_0;
+    public double q_n;
+    public double q_l;///azimuthal quantum number
+    double temp_l = q_l;
+    public double q_m;///magnetic quantum number
+    final static double a_0 = 5.29177210544 * Math.pow(10, -11);///bohr radius (in meters)
+    static double maxR = 80 * a_0;///radius away where it won't calculate anymore
     static double sqrtPart = -1;
-    static double tempExp = Math.exp(-1/(q_n * a_0));
+    double tempExp = Math.exp(-1/(q_n * a_0));
     static double tempFrame = 0;
     static double tempTime = System.nanoTime();
     static int subsections = 50;
@@ -44,47 +42,60 @@ public class WaveFunction extends Electron
     static double[] cProbCol;
     static double max;
     static double[][] rows;
-    static int pointNum = 1000;
-    public static void main(String[] args)
-    {
-        try {
-            ICsvListWriter listWriter = null;
-            try
-            {
-                listWriter = new CsvListWriter(new FileWriter(csvFile), CsvPreference.STANDARD_PREFERENCE);
-                final String[] header = new String[] {"rStart","rEnd","thetaStart","thetaEnd","phiStart","phiEnd","cumulativeProb"};
-                listWriter.writeHeader(header);
+    static int pointNum = 1000;///how many points will be rendered
+    /**
+     you can get probability density equation of electron around hydrogen atom from wikipedia
+     what this does is it tries to generate an electron based on that weighted probability density equation
+     it splits up the region where it needs to calculate (a sphere with radius maxR) into subsections in spherical coordinates of r, theta, and phi
+     then it integrates over that region and finds the probability density of that entire section and puts it into a file with necessary info
+     then it normalizes the data so all the probabilities for every section add up to 1
+     then you can use a random number generator and invert the probability density function such that a random number returns a section instead of a point returning a probability density
+     */
 
-                double cumulativeProb = 0;
-                int sectionsR = 10;
-                int sectionsTheta = 24;
-                int sectionsPhi = 12;
-                for(double r = 0; r < maxR; r += maxR/sectionsR)
-                {
-                    for(double theta = 0; theta < 2 * Math.PI; theta += 2 * Math.PI / sectionsTheta)
-                    {
-                        for(double phi = 0; phi < Math.PI; phi += Math.PI/sectionsPhi)
-                        {
-                            //System.out.println(tempPoint);
-                            //Complex tempPsi = psi(q_n, q_l, q_m, tempPoint.getX(), tempPoint.getY(), tempPoint.getZ());
-                            //double tempProb = (tempPsi.conjugate().multiply(tempPsi)).getReal() * Math.pow(dS, 3);
-                            double tempProb = integrateTheta(r, r + maxR/sectionsR, theta, theta + 2 * Math.PI/sectionsTheta, phi, phi + Math.PI/sectionsPhi);
-                            //System.out.println(tempProb);
-                            cumulativeProb += tempProb;
-                            final Double[] tempList = new Double[] {r, r + maxR/sectionsR, theta, theta + 2 * Math.PI/sectionsTheta, phi, phi + Math.PI/sectionsPhi, cumulativeProb};
-                            listWriter.write(tempList);
-                        }
-                    }
-                    System.out.println(100 * r/maxR + "% done creating orbitals");
-                }
-            }
-            finally
+    public WaveFunction(double n, double l, double m, double time, Panel panel)
+    {
+        super(new Point3D(0,0,0), time, panel);
+        q_n = n;
+        q_l = l;
+        q_m = m;
+        //createData();
+    }
+    public void createData()
+    {
+        ICsvListWriter listWriter = null;
+        try
+        {
+            PrintWriter pw = new PrintWriter(csvFile);
+            FileWriter fw = new FileWriter("cDistInfo.csv", false);
+            listWriter = new CsvListWriter(fw, CsvPreference.STANDARD_PREFERENCE);
+            final String[] header = new String[] {"rStart","rEnd","thetaStart","thetaEnd","phiStart","phiEnd","cumulativeProb"};
+            listWriter.writeHeader(header);
+
+            maxR *= q_n * q_n/20;
+            double cumulativeProb = 0;
+            int sectionsR = 175;
+            int sectionsTheta = 44;
+            int sectionsPhi = 22;
+            for(double r = 0; r < maxR; r += maxR/sectionsR)
             {
-                if(listWriter != null)
+                for(double theta = 0; theta < 2 * Math.PI; theta += 2 * Math.PI / sectionsTheta)
                 {
-                    listWriter.close();
+                    for(double phi = 0; phi < Math.PI; phi += Math.PI/sectionsPhi)
+                    {
+                        //System.out.println(tempPoint);
+                        //Complex tempPsi = psi(q_n, q_l, q_m, tempPoint.getX(), tempPoint.getY(), tempPoint.getZ());
+                        //double tempProb = (tempPsi.conjugate().multiply(tempPsi)).getReal() * Math.pow(dS, 3);
+                        double tempProb = integrateTheta(r, r + maxR/sectionsR, theta, theta + 2 * Math.PI/sectionsTheta, phi, phi + Math.PI/sectionsPhi);
+                        //System.out.println(tempProb);
+                        cumulativeProb += tempProb;
+                        final Double[] tempList = new Double[] {r, r + maxR/sectionsR, theta, theta + 2 * Math.PI/sectionsTheta, phi, phi + Math.PI/sectionsPhi, cumulativeProb};
+                        listWriter.write(tempList);
+                    }
                 }
+                System.out.println(100 * r/maxR + "% done creating orbitals");
             }
+            System.out.println("Done creating orbitals");
+            listWriter.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -178,13 +189,6 @@ public class WaveFunction extends Electron
         }
         return tempProb;
     }
-    public WaveFunction(double n, double l, double m, double time, Panel panel)
-    {
-        super(simulateUntilPoint(maxR), time, panel);
-        q_n = n;
-        q_l = l;
-        q_m = m;
-    }
     @Override
     public void update(Graphics g, double time, Panel panel)
     {
@@ -218,17 +222,21 @@ public class WaveFunction extends Electron
         points = panel.rotate(points);
         for(int i = 0; i < points.length; i++)
         {
+            /*double dist = new Point3D(panel.camCoordX, panel.camCoordY, panel.camCoordZ).distance(points[i]);
+            double temp = 255 * (1 - Math.exp(-Math.log(dist * 1E10 + 1)));
+            System.out.println(temp);
+            g.setColor(new Color(255 - (int)temp, 255 - (int)temp, 0));*/
             g.fillOval((int) (panel.coordsToScreenX(points[i].getX())), (int) (panel.coordsToScreenY(points[i].getY())), 4, 4);
         }
         Graphics2D g2d = (Graphics2D)g;
         g2d.setStroke(new BasicStroke(5));
-        Point3D tempPoint = panel.rotate(Math.pow(10, -9), 0, 0);
         g.setColor(new Color(100,100,200));
+        Point3D tempPoint = panel.rotatePointAlpha(new Point3D(10E-9, 0, 0));
         g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
-        tempPoint = panel.rotate(0, Math.pow(10, -9), 0);
+        tempPoint = panel.rotatePointAlpha(new Point3D(0, 10E-9, 0));
         g.setColor(new Color(200, 100, 100));
         g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
-        tempPoint = panel.rotate(0, 0, Math.pow(10, -9));
+        tempPoint = panel.rotatePointAlpha(new Point3D(0, 0,10E-9));
         g.setColor(new Color(100, 200, 100));
         g.drawLine((int)(panel.windowX /2.0), (int)(panel.windowY /2.0), (int)(panel.coordsToScreenX(tempPoint.getX())), (int)(panel.coordsToScreenY(tempPoint.getY())));
         //System.out.println((int)(panel.coordsToScreenX(tempPoint.getX())) + " :" + (int)(panel.coordsToScreenY(tempPoint.getY())));
@@ -237,7 +245,7 @@ public class WaveFunction extends Electron
             movements = new ArrayList<>(movements.subList(movements.size() - 20, movements.size()));
             times = new ArrayList<Double>(times.subList(movements.size() - 20, movements.size()));
         }
-        movements.add(new Double[]{x, y, z, time});
+        movements.add(new Double[]{x, y, z, time, (double)movements.size()});
         times.add(time);
         frames++;
     }
@@ -264,7 +272,7 @@ public class WaveFunction extends Electron
         }
         return -1;
     }
-    public static ArrayList<Point3D> simulateProbability(int num_points, double max_r)//uses monte carlo hit-and-miss method
+    public ArrayList<Point3D> simulateProbability(int num_points, double max_r)//uses monte carlo hit-and-miss method
     {//https://compphys.notes.dmaitre.phyip3.dur.ac.uk/lectures/lecture-5/probability-distributions/
         ArrayList<Point3D> points = new ArrayList<>();
 
@@ -286,7 +294,7 @@ public class WaveFunction extends Electron
         }
         return points;
     }
-    public static Point3D simulateUntilPoint(double max_r)
+    public Point3D simulateUntilPoint(double max_r, double n, double l, double m)
     {
         while(true)
         {
@@ -311,9 +319,9 @@ public class WaveFunction extends Electron
         double z = initPoint.getX() * Math.cos(initPoint.getZ());
         return new Point3D(x,y,z);
     }
-    private static double integrateR(double min_r, double max_r, double theta, double phi)
+    private double integrateR(double min_r, double max_r, double theta, double phi)
     {
-        int subsectionsR = 10;
+        int subsectionsR = 1;
         double dr = (max_r - min_r)/subsectionsR;
         double total = 0;
         for(double r = min_r; r < max_r; r += dr)
@@ -323,9 +331,9 @@ public class WaveFunction extends Electron
         }
         return total * dr;
     }
-    private static double integratePhi(double min_r, double max_r, double theta, double min_phi, double max_phi)
+    private double integratePhi(double min_r, double max_r, double theta, double min_phi, double max_phi)
     {
-        int subsectionsPhi = 5;
+        int subsectionsPhi = 1;
         double dP = (Math.max(max_phi, min_phi) - Math.min(min_phi, max_phi))/subsectionsPhi;
         double total = 0;
         for(double phi = Math.min(min_phi, max_phi); phi < Math.max(max_phi, min_phi); phi += dP)
@@ -334,9 +342,9 @@ public class WaveFunction extends Electron
         }
         return total * dP;
     }
-    public static double integrateTheta(double min_r, double max_r, double min_theta, double max_theta, double min_phi, double max_phi)
+    public double integrateTheta(double min_r, double max_r, double min_theta, double max_theta, double min_phi, double max_phi)
     {
-        int subsectionsTheta = 10;
+        int subsectionsTheta = 1;
         double dT = (Math.max(max_theta, min_theta) - Math.min(min_theta, max_theta))/subsectionsTheta;
         double total = 0;
         for(double theta = Math.min(min_theta, max_theta); theta < Math.max(max_theta, min_theta); theta += dT)
@@ -345,10 +353,10 @@ public class WaveFunction extends Electron
         }
         return total * dT;
     }
-    public static Complex psi(double n, double l, double m, double r, double theta, double phi)
-    {//https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation when defining psi_{n,l,m} around hyperlink [25]
+    public Complex psi(double n, double l, double m, double r, double theta, double phi)
+    {///https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation when defining psi_{n,l,m} around hyperlink [25]
         Complex sphHarmTerm = sphericalHarmonics(theta, phi);
-        if(sqrtPart == -1) //removing redundant calculation
+        if(sqrtPart == -1) ///removing redundant calculation
         {
             sqrtPart = sqrtPart(n, l);
         }
@@ -368,15 +376,15 @@ public class WaveFunction extends Electron
         }
         return sqrtPart;
     }
-    public static Complex sphericalHarmonics(double theta, double phi)
-    {//https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Quantum_Mechanics/07._Angular_Momentum/Spherical_Harmonics eq (1)
+    public Complex sphericalHarmonics(double theta, double phi)
+    {///https://chem.libretexts.org/Bookshelves/Physical_and_Theoretical_Chemistry_Textbook_Maps/Supplemental_Modules_(Physical_and_Theoretical_Chemistry)/Quantum_Mechanics/07._Angular_Momentum/Spherical_Harmonics eq (1)
         double sqrtPart = Math.sqrt(((2*q_l + 1) * factorial(q_l - Math.abs(q_m))) / (4 * Math.PI * factorial(q_l + Math.abs(q_m))));
         double tempAngle = q_m * theta;
         Complex expPart = Complex.valueOf(Math.cos(tempAngle)).add(Complex.I.multiply(Complex.valueOf(Math.sin(tempAngle))));
         return Complex.valueOf(sqrtPart).multiply(expPart).multiply(Complex.valueOf(assocLegendre(Math.cos(phi), Math.abs(q_m), q_l)));
     }
-    public static double assocLegendre(double x, double m, double l)
-    {//https://en.wikipedia.org/wiki/Associated_Legendre_polynomials clarification in section titled "negative m and/or negative l
+    public double assocLegendre(double x, double m, double l)
+    {///https://en.wikipedia.org/wiki/Associated_Legendre_polynomials clarification in section titled "negative m and/or negative l
         FiniteDifferencesDifferentiator differentiator = new FiniteDifferencesDifferentiator(20, 0.001);
         UnivariateDifferentiableFunction completeF = differentiator.differentiate(legendreF);
         DerivativeStructure x_d = new DerivativeStructure(1, (int)Math.abs(m), 0, x);
@@ -402,10 +410,10 @@ public class WaveFunction extends Electron
         //return assocLegendreNthDer(x, (int) q_m, 1 - q_l);
         return y_d.getPartialDerivative((int)m);
     }
-    static UnivariateFunction legendreF = new UnivariateFunction() {
+    UnivariateFunction legendreF = new UnivariateFunction() {
         @Override
         public double value(double x)
-        {//https://mathworld.wolfram.com/LegendrePolynomial.html (31)
+        {///https://mathworld.wolfram.com/LegendrePolynomial.html (31)
             double l = temp_l;
             double temp = 0;
             for(int k = 0; k <= Math.floor(l/2); k++)
@@ -415,14 +423,14 @@ public class WaveFunction extends Electron
             return Math.pow(0.5, l)*temp;
         }
     };
-    public static double assocLaguerre(double x, int n, int alpha)//degree of associated laguerre polynomial is n, order of it is alpha
-    {//https://mathworld.wolfram.com/AssociatedLaguerrePolynomial.html
+    public static double assocLaguerre(double x, int n, int alpha)///degree of associated laguerre polynomial is n, order of it is alpha
+    {///https://mathworld.wolfram.com/AssociatedLaguerrePolynomial.html
         double temp = 0;
         for(int q = 0; q <= n; q++)
         {
             temp += Math.pow(x, q) * Math.pow(-1, q) * factorial(n + alpha) / ((factorial(n - q) * factorial(alpha + q) * factorial(q)));
         }
-        return temp;//associated laguerre polynomials are used for psi
+        return temp;///associated laguerre polynomials are used for psi
     }
     public static double factorial(double a)
     {
